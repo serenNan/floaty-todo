@@ -2,6 +2,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum Quadrant {
+    UrgentImportant,
+    NotUrgentImportant,
+    UrgentNotImportant,
+    NotUrgentNotImportant,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Task {
     pub id: String,
@@ -12,6 +21,8 @@ pub struct Task {
     pub indent: usize,
     /// Which `Source` this task belongs to (for UI grouping and per-source actions).
     pub source_id: String,
+    #[serde(default)]
+    pub quadrant: Option<Quadrant>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -153,4 +164,40 @@ pub fn hash_content(bytes: &[u8]) -> ContentHash {
     let mut h = Sha256::new();
     h.update(bytes);
     h.finalize().into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn quadrant_serializes_as_snake_case() {
+        let v = serde_json::to_string(&Quadrant::UrgentImportant).unwrap();
+        assert_eq!(v, "\"urgent_important\"");
+        let v = serde_json::to_string(&Quadrant::NotUrgentNotImportant).unwrap();
+        assert_eq!(v, "\"not_urgent_not_important\"");
+    }
+
+    #[test]
+    fn task_quadrant_serializes_when_set() {
+        let t = Task {
+            id: "abc".into(),
+            text: "hi".into(),
+            completed: false,
+            source_file: std::path::PathBuf::from("/x.md"),
+            line_number: 1,
+            indent: 0,
+            source_id: "s".into(),
+            quadrant: Some(Quadrant::UrgentImportant),
+        };
+        let json = serde_json::to_string(&t).unwrap();
+        assert!(json.contains("\"quadrant\":\"urgent_important\""));
+    }
+
+    #[test]
+    fn task_quadrant_deserializes_missing_as_none() {
+        let json = r#"{"id":"a","text":"hi","completed":false,"source_file":"/x.md","line_number":1,"indent":0,"source_id":"s"}"#;
+        let t: Task = serde_json::from_str(json).unwrap();
+        assert!(t.quadrant.is_none());
+    }
 }

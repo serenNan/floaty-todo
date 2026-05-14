@@ -44,6 +44,7 @@ pub fn parse_file(path: &Path, source_id: &str) -> Result<Vec<Task>> {
                 line_number,
                 indent: p.indent,
                 source_id: source_id.to_string(),
+                quadrant: None,
             });
         }
     }

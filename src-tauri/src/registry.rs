@@ -198,6 +198,7 @@ mod tests {
             kind: SourceKind::Folder,
             label: None,
             project_root: None,
+            color: None,
         }
     }
 
@@ -208,6 +209,7 @@ mod tests {
             kind: SourceKind::File,
             label: None,
             project_root: None,
+            color: None,
         }
     }
 

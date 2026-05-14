@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { Task } from '../types/task';
+import type { Task, Quadrant } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
@@ -11,6 +11,32 @@ import Icon from './icons/Icon.vue';
 import QuickActionIcon from './icons/QuickActionIcon.vue';
 
 defineEmits<{ openSettings: [] }>();
+
+const QUADRANT_BUTTONS: Array<{ q: Quadrant | null; emoji: string; tooltipKey: string }> = [
+  { q: 'urgent_important', emoji: '🔴', tooltipKey: 'quadrant.urgent_important' },
+  { q: 'not_urgent_important', emoji: '🟡', tooltipKey: 'quadrant.not_urgent_important' },
+  { q: 'urgent_not_important', emoji: '🟠', tooltipKey: 'quadrant.urgent_not_important' },
+  { q: 'not_urgent_not_important', emoji: '🟢', tooltipKey: 'quadrant.not_urgent_not_important' },
+  { q: null, emoji: '⚪', tooltipKey: 'quadrant.unsorted' },
+];
+
+const LAST_QUADRANT_KEY = 'floaty.lastQuadrant';
+
+function loadLastQuadrant(): Quadrant | null {
+  const v = localStorage.getItem(LAST_QUADRANT_KEY);
+  if (v === 'urgent_important' || v === 'not_urgent_important'
+      || v === 'urgent_not_important' || v === 'not_urgent_not_important') {
+    return v;
+  }
+  return null;
+}
+
+const selectedQuadrant = ref<Quadrant | null>(loadLastQuadrant());
+
+function pickQuadrant(q: Quadrant | null) {
+  selectedQuadrant.value = q;
+  localStorage.setItem(LAST_QUADRANT_KEY, q ?? 'unsorted');
+}
 
 const { t } = useI18n();
 const tasks = useTaskStore();
@@ -46,7 +72,7 @@ const totals = computed(() => {
 
 async function submit() {
   if (!newText.value.trim()) return;
-  await tasks.add(newText.value, addTargetId.value ?? undefined);
+  await tasks.add(newText.value, addTargetId.value ?? undefined, selectedQuadrant.value);
   newText.value = '';
 }
 
@@ -149,6 +175,17 @@ function toggleCollapseAll() {
           {{ s.label ?? s.path.split(/[\\/]/).filter(Boolean).pop() ?? s.path }}
         </option>
       </select>
+      <div class="quadrant-picker">
+        <button
+          v-for="b in QUADRANT_BUTTONS"
+          :key="String(b.q)"
+          type="button"
+          class="quadrant-btn"
+          :class="{ active: selectedQuadrant === b.q }"
+          :title="$t(b.tooltipKey)"
+          @click="pickQuadrant(b.q)"
+        >{{ b.emoji }}</button>
+      </div>
       <div
         class="add-source-wrap"
         ref="addSourceWrap"
@@ -473,5 +510,26 @@ function toggleCollapseAll() {
 }
 .pin-btn:not(.active):hover .pin-emoji {
   filter: grayscale(0) opacity(0.85);
+}
+
+.quadrant-picker {
+  display: inline-flex;
+  gap: 0.1rem;
+  margin-left: 0.3rem;
+}
+.quadrant-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.95em;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.quadrant-btn:hover { opacity: 0.85; }
+.quadrant-btn.active {
+  opacity: 1;
+  border-color: var(--accent, #5af);
+  background: var(--accent-bg, rgba(85, 170, 255, 0.12));
 }
 </style>

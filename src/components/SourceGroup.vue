@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import type { Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
-import TaskItem from './TaskItem.vue';
+import FileGroup from './FileGroup.vue';
 
 const props = defineProps<{ source: Source; tasks: Task[] }>();
 const { t } = useI18n();
@@ -26,8 +26,30 @@ const displayLabel = computed(() => {
 
 const counts = computed(() => {
   let todo = 0, done = 0;
-  for (const t of props.tasks) (t.completed ? done++ : todo++);
+  for (const tk of props.tasks) (tk.completed ? done++ : todo++);
   return { todo, done };
+});
+
+/// Group tasks by their `source_file`. For File sources this collapses to a
+/// single bucket; for Folder sources each `.md` file becomes its own group.
+/// Files with zero tasks are included only when this is a File source — for
+/// Folder sources we keep the list to "files that have tasks" so the source
+/// header stays compact.
+const fileGroups = computed(() => {
+  const map = new Map<string, Task[]>();
+  for (const tk of props.tasks) {
+    const arr = map.get(tk.source_file);
+    if (arr) arr.push(tk);
+    else map.set(tk.source_file, [tk]);
+  }
+  // For a File source, ensure the source path is always present even when empty.
+  if (props.source.kind === 'file' && !map.has(props.source.path)) {
+    map.set(props.source.path, []);
+  }
+  // Stable ordering: by file path string.
+  return Array.from(map.entries())
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([filePath, fileTasks]) => ({ filePath, tasks: fileTasks }));
 });
 
 function startEdit() {
@@ -125,8 +147,14 @@ async function openTerminal() {
     </div>
 
     <div v-if="!collapsed" class="rows">
-      <TaskItem v-for="tk in tasks" :key="tk.id" :task="tk" />
-      <div v-if="tasks.length === 0 && !editing" class="empty-source">{{ t('source.noTasks') }}</div>
+      <FileGroup
+        v-for="g in fileGroups"
+        :key="g.filePath"
+        :source="source"
+        :file-path="g.filePath"
+        :tasks="g.tasks"
+      />
+      <div v-if="fileGroups.length === 0 && !editing" class="empty-source">{{ t('source.noTasks') }}</div>
     </div>
   </section>
 </template>

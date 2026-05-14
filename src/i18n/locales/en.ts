@@ -19,6 +19,11 @@ export default {
     addFolderTitle: 'Add folder source',
     addFileTitle: 'Add file source',
   },
+  file: {
+    editLabel: 'Rename this file',
+    resetLabel: 'Reset to default name',
+    noTasks: 'No tasks in this file.',
+  },
   source: {
     noTasks: 'No tasks in this source.',
     defaultBadge: 'default',

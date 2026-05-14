@@ -19,6 +19,11 @@ export default {
     addFolderTitle: '添加文件夹源',
     addFileTitle: '添加文件源',
   },
+  file: {
+    editLabel: '重命名此文件',
+    resetLabel: '恢复默认名称',
+    noTasks: '此文件中暂无任务。',
+  },
   source: {
     noTasks: '此源下暂无任务。',
     defaultBadge: '默认',

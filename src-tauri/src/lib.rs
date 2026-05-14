@@ -157,6 +157,7 @@ pub fn run() {
             commands::remove_source,
             commands::update_source,
             commands::set_default_source,
+            commands::set_file_label,
             commands::open_in_vscode,
             commands::open_in_terminal,
             commands::show_window,

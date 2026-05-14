@@ -9,6 +9,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const sources = computed<Source[]>(() => config.value?.sources ?? []);
   const hasSources = computed(() => sources.value.length > 0);
   const defaultSourceId = computed(() => config.value?.default_source_id ?? null);
+  const fileLabels = computed<Record<string, string>>(() => config.value?.file_labels ?? {});
+
+  function fileLabel(filePath: string): string | null {
+    return fileLabels.value[filePath] ?? null;
+  }
 
   async function load() {
     config.value = await api.getConfig();
@@ -45,6 +50,11 @@ export const useSettingsStore = defineStore('settings', () => {
     await load();
   }
 
+  async function setFileLabel(filePath: string, label: string | null) {
+    await api.setFileLabel(filePath, label);
+    await load();
+  }
+
   /// Convenience: open the folder picker, then add the chosen path as a Folder source.
   async function pickAndAddFolder(): Promise<Source | null> {
     const path = await api.pickFolder();
@@ -64,11 +74,14 @@ export const useSettingsStore = defineStore('settings', () => {
     sources,
     hasSources,
     defaultSourceId,
+    fileLabels,
+    fileLabel,
     load,
     addSource,
     removeSource,
     updateSource,
     setDefaultSource,
+    setFileLabel,
     pickAndAddFolder,
     pickAndAddFile,
   };

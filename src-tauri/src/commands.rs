@@ -2,7 +2,7 @@ use crate::config;
 use crate::error::{AppError, Result};
 use crate::registry::TaskRegistry;
 use crate::storage;
-use crate::types::{AppConfig, Source, SourceKind, Task};
+use crate::types::{file_label_key, AppConfig, Source, SourceKind, Task};
 use crate::watcher::IgnoreHashes;
 use crate::{spawn_source_scan_and_watcher, WatcherSlots};
 use std::path::PathBuf;
@@ -223,6 +223,31 @@ pub fn set_default_source(
         }
     }
     cfg.default_source_id = source_id;
+    config::save_to(&state.config_path, &cfg)?;
+    drop(cfg);
+    let _ = app.emit("sources-changed", ());
+    Ok(())
+}
+
+/// Set or clear the display label for a single file inside a source.
+/// Pass `label = None` (or an empty string after trim) to remove the override.
+#[tauri::command]
+pub fn set_file_label(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    file_path: PathBuf,
+    label: Option<String>,
+) -> Result<()> {
+    let key = file_label_key(&file_path);
+    let mut cfg = state.config.write().unwrap();
+    match label {
+        Some(l) if !l.trim().is_empty() => {
+            cfg.file_labels.insert(key, l.trim().to_string());
+        }
+        _ => {
+            cfg.file_labels.remove(&key);
+        }
+    }
     config::save_to(&state.config_path, &cfg)?;
     drop(cfg);
     let _ = app.emit("sources-changed", ());

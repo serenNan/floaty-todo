@@ -1,5 +1,38 @@
 # 变更日志
 
+## 2026-05-14 per-file nested groups inside each source, with renameable labels
+
+Folder sources now split their tasks into one collapsible group per `.md`
+file, so a vault with many notes no longer dumps everything into one giant
+list. Each file group can be expanded / collapsed independently, and the
+user can give it a custom display name to avoid the "five `todo.md` files
+all look the same" problem.
+
+### Backend
+- `types.rs`: `AppConfig` gains `file_labels: HashMap<String, String>` —
+  keyed by canonical / dunce-simplified absolute path; `file_label_key()`
+  helper centralises the key derivation
+- `commands.rs`: new `set_file_label(file_path, label)` command —
+  `None` or empty-after-trim clears the override
+- `lib.rs`: registers `set_file_label` in `invoke_handler!`
+- `config.rs`: existing `load_strips_verbatim_prefix_and_remaps_default_id`
+  test updated for the new `file_labels` field
+- All 38 unit tests pass
+
+### Frontend
+- `src/types/task.ts`: `AppConfig.file_labels: Record<string, string>`
+- `src/services/tauri-api.ts`: new `setFileLabel(filePath, label)`
+- `src/stores/settings.ts`: exposes `fileLabels` / `fileLabel(path)` /
+  `setFileLabel(path, label)`
+- `src/components/FileGroup.vue` (new): per-file row with caret toggle,
+  hover-revealed ✎ rename button, inline rename input (Enter to save,
+  Esc to cancel, ↺ to reset to default name), and the task list
+- `src/components/SourceGroup.vue`: tasks are now bucketed by
+  `task.source_file` and each bucket renders as a `FileGroup`; File-kind
+  sources still render as a single group; ordering is stable by file path
+- `src/i18n/locales/{en,zh}.ts`: added `file.editLabel` / `file.resetLabel` /
+  `file.noTasks`
+
 ## 2026-05-14 strip Windows verbatim path prefixes (\\?\) — friendly prompts
 
 Rust's `std::fs::canonicalize` returns `\\?\D:\...` on Windows. When that

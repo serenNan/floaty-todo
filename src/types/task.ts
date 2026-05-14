@@ -23,4 +23,6 @@ export interface AppConfig {
   default_source_id: string | null;
   inbox_file: string;
   always_on_top: boolean;
+  /// Keyed by file path string (canonical, dunce-simplified on the Rust side).
+  file_labels: Record<string, string>;
 }

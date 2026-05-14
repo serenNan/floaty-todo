@@ -123,6 +123,7 @@ mod tests {
             default_source_id: Some(legacy_id.clone()),
             inbox_file: "inbox.md".into(),
             always_on_top: true,
+            file_labels: HashMap::new(),
         };
         save_to(&p, &cfg).unwrap();
 

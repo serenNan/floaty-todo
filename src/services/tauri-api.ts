@@ -37,6 +37,8 @@ export const api = {
     }),
   setDefaultSource: (sourceId: string | null) =>
     invoke<void>('set_default_source', { sourceId }),
+  setFileLabel: (filePath: string, label: string | null) =>
+    invoke<void>('set_file_label', { filePath, label }),
 
   openInVscode: (sourceId: string) => invoke<void>('open_in_vscode', { sourceId }),
   openInTerminal: (sourceId: string) => invoke<void>('open_in_terminal', { sourceId }),

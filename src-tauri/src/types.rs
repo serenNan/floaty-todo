@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -75,6 +76,12 @@ pub struct AppConfig {
     /// For File sources, `add_task` appends to the source file itself.
     pub inbox_file: String,
     pub always_on_top: bool,
+    /// User-defined display labels keyed by file path (string form of the
+    /// canonicalised, dunce-simplified absolute path). Lets the UI rename
+    /// individual files inside a Folder source — two `todo.md` files in
+    /// different sub-folders can be told apart at a glance.
+    #[serde(default)]
+    pub file_labels: HashMap<String, String>,
 }
 
 impl Default for AppConfig {
@@ -84,8 +91,15 @@ impl Default for AppConfig {
             default_source_id: None,
             inbox_file: "inbox.md".into(),
             always_on_top: true,
+            file_labels: HashMap::new(),
         }
     }
+}
+
+/// Map a file path to the key used in `AppConfig::file_labels`. Always
+/// goes through `dunce::simplified` so verbatim and friendly forms agree.
+pub fn file_label_key(path: &std::path::Path) -> String {
+    dunce::simplified(path).to_string_lossy().to_string()
 }
 
 /// 32-byte SHA-256 of file contents — used for watcher loop prevention.

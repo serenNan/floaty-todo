@@ -63,10 +63,13 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // ----- Config: load or default
+            // ----- Config: load or default. load_from also normalises legacy
+            // verbatim paths (\\?\...) — persist the cleaned form so the JSON
+            // on disk matches what the UI / shell launchers see.
             let app_config_dir = app.path().app_config_dir().expect("config dir");
             let config_path = config::config_file(&app_config_dir);
             let cfg = config::load_from(&config_path).unwrap_or_default();
+            let _ = config::save_to(&config_path, &cfg);
 
             // ----- Registry + watcher slots
             let registry = Arc::new(RwLock::new(TaskRegistry::new()));

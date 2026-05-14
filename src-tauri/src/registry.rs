@@ -135,18 +135,20 @@ fn file_belongs_to_source(src: &Source, file: &Path) -> bool {
 }
 
 /// Build a stable canonical path even when the file no longer exists.
+/// Uses `dunce::canonicalize` so Windows verbatim prefixes (`\\?\`) are
+/// stripped — keeps paths friendly for prompts / VS Code title bars.
 pub fn best_effort_canonical(path: &Path) -> PathBuf {
-    if let Ok(c) = path.canonicalize() {
+    if let Ok(c) = dunce::canonicalize(path) {
         return c;
     }
     if let Some(parent) = path.parent() {
-        if let Ok(cp) = parent.canonicalize() {
+        if let Ok(cp) = dunce::canonicalize(parent) {
             if let Some(name) = path.file_name() {
                 return cp.join(name);
             }
         }
     }
-    path.to_path_buf()
+    dunce::simplified(path).to_path_buf()
 }
 
 /// Filter: only `.md`/`.markdown`, skip ignore list.

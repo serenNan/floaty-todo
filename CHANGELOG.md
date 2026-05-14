@@ -1,5 +1,31 @@
 # 变更日志
 
+## 2026-05-14 strip Windows verbatim path prefixes (\\?\) — friendly prompts
+
+Rust's `std::fs::canonicalize` returns `\\?\D:\...` on Windows. When that
+path landed in `Source.path` and we passed it to `pwsh -WorkingDirectory`,
+the PowerShell prompt rendered as `PS Microsoft.PowerShell.Core\FileSystem::\\?\D:\Projects\WishTalk>`
+instead of `PS D:\Projects\WishTalk>`. Same prefix would creep into
+VS Code title bars and the SettingsView source-path display.
+
+- `Cargo.toml`: + `dunce = "1"`
+- `types.rs`: `Source::id_for` now feeds `dunce::simplified()` into the
+  hash so verbatim and friendly forms of the same path agree on an id
+- `registry.rs`: `best_effort_canonical` switches to `dunce::canonicalize`
+  (with `dunce::simplified` as the final fallback when the file is gone)
+- `parser.rs`: `parse_file` uses `dunce::canonicalize` for `Task.source_file`
+- `commands.rs`: `add_source` canonicalises with `dunce` before hashing /
+  persisting
+- `config.rs`: `load_from` runs `normalize_paths` — idempotent migration
+  that strips `\\?\` from every `source.path` / `project_root`, recomputes
+  ids on the cleaned paths, and remaps `default_source_id` if the
+  underlying source id changed; new unit test
+  `load_strips_verbatim_prefix_and_remaps_default_id` covers the migration
+- `lib.rs`: setup `save_to`'s the cleaned config back after load so the
+  on-disk JSON also gets normalised on first launch after this upgrade
+- 38 unit tests pass (was 35; added the migration test + two shell tests
+  from earlier)
+
 ## 2026-05-14 dedicated Settings page (theme / language / sources) + i18n (en/zh)
 
 Centralised settings page replaces the floating theme button. The bottom-left

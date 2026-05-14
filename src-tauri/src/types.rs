@@ -37,9 +37,12 @@ pub struct Source {
 }
 
 impl Source {
-    /// Compute the stable id for a given absolute path.
+    /// Compute the stable id for a given absolute path. The path is run
+    /// through `dunce::simplified` first so a verbatim form (`\\?\D:\...`)
+    /// and its friendly form (`D:\...`) hash to the same id.
     pub fn id_for(path: &std::path::Path) -> String {
-        hex::encode(&hash_content(path.to_string_lossy().as_bytes())[..8])
+        let cleaned = dunce::simplified(path);
+        hex::encode(&hash_content(cleaned.to_string_lossy().as_bytes())[..8])
     }
 
     /// Effective project root for shell actions, applying the default.

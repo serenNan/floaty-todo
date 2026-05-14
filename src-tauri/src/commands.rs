@@ -107,7 +107,10 @@ pub fn add_source(
         _ => {}
     }
 
-    let canonical = path.canonicalize().unwrap_or(path.clone());
+    // dunce::canonicalize avoids Windows verbatim prefix (\\?\) unless the
+    // path is long-enough to actually require it. Falls back to the original
+    // when canonicalize fails (rare for an existing path).
+    let canonical = dunce::canonicalize(&path).unwrap_or(path.clone());
     let id = Source::id_for(&canonical);
 
     // Duplicate check on id (== canonical path hash).

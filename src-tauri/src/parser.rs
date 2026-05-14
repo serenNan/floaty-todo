@@ -29,7 +29,7 @@ pub fn parse_file(path: &Path, source_id: &str) -> Result<Vec<Task>> {
     let content = if raw.starts_with(&[0xEF, 0xBB, 0xBF]) { &raw[3..] } else { &raw[..] };
     let text = String::from_utf8_lossy(content);
 
-    let abs = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let abs = dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
     let mut tasks = Vec::new();
     for (i, line) in text.lines().enumerate() {
         let line_number = i + 1;

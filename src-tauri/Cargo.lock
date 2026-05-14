@@ -994,6 +994,7 @@ dependencies = [
 name = "floaty-todo"
 version = "0.1.0"
 dependencies = [
+ "dunce",
  "hex",
  "notify",
  "notify-debouncer-full",

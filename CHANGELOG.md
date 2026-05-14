@@ -1,5 +1,40 @@
 # 变更日志
 
+## 2026-05-14 unified cartoon SVG icon library — replaces every ASCII / emoji glyph
+
+Every icon-style button across the app now renders through a single
+`<Icon name="…" />` component instead of scattering ⚙ / ↻ / ▾ / 📁 /
+📄 / 🗑 / 📝 / ✎ / ↺ / ← / ⟳ / ☀ / 🌙 / 🖥 literals through templates.
+Style is intentionally chunky and friendly (Lucide-inspired outlines,
+1.9 px stroke, rounded caps) so it reads as a coherent set even at 12 px.
+
+- `src/components/icons/Icon.vue` (new): central component;
+  `name: IconName` (literal string union) + `size`; 20 icons —
+  `pin` / `pin-off` / `settings` / `refresh` / `plus` / `chevron-down` /
+  `chevron-right` / `more-horizontal` / `pencil` / `rotate-ccw` /
+  `folder` / `file` / `trash` / `sun` / `moon` / `monitor` /
+  `arrow-left` / `loader` / `check` / `x`; chunkier pin variants
+  (filled tilted thumbtack with highlight when pinned, outlined and
+  more tilted when floating)
+- `src/components/TaskList.vue`: replaces `⚙ ↻ +` and the old inline
+  pin SVG; new shared `.icon-only` footer-button modifier flexbox-centres
+  the icon at 28×26 px
+- `src/components/SourceGroup.vue`: caret (`▾/▸`), kind icon (`📁/📄`),
+  scanning spinner (`⟳`), more-horizontal `⋯`, and the folder-picker in
+  the inline editor all switch to `<Icon>`; brand quick-action buttons
+  keep their `<QuickActionIcon>`
+- `src/components/FileGroup.vue`: caret + pencil-rename + rotate-ccw
+  reset all use `<Icon>`
+- `src/views/SettingsView.vue`: back arrow, theme segmented (sun / moon /
+  monitor), source toolbar (folder / file with text labels), per-card
+  source actions (`QuickActionIcon` for vscode/terminal, `Icon` for
+  pencil / trash), inline editor folder-picker
+- `src/components/EmptyState.vue`: folder / file picker buttons + corner
+  settings cog all use `<Icon>`
+- `src/i18n/locales/{en,zh}.ts`: stripped emoji prefixes from `empty.add*`
+  and `settings.sources.add*` strings — the icon component supplies the
+  visual now, the text is just the label
+
 ## 2026-05-14 pin / unpin always-on-top toggle in TaskList footer
 
 The app shipped with always-on-top permanently on. Users who want to

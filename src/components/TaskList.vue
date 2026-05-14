@@ -5,6 +5,7 @@ import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
 import { useSettingsStore } from '../stores/settings';
 import SourceGroup from './SourceGroup.vue';
+import Icon from './icons/Icon.vue';
 
 defineEmits<{ openSettings: [] }>();
 
@@ -57,7 +58,9 @@ async function submit() {
           {{ s.label ?? s.path.split(/[\\/]/).filter(Boolean).pop() ?? s.path }}
         </option>
       </select>
-      <button type="submit" :title="t('tasks.addPlaceholder', { target: addTargetLabel })">+</button>
+      <button type="submit" :title="t('tasks.addPlaceholder', { target: addTargetLabel })">
+        <Icon name="plus" :size="16" />
+      </button>
     </form>
 
     <div class="rows-wrap">
@@ -74,35 +77,24 @@ async function submit() {
     </div>
 
     <div class="footer">
-      <button class="footer-btn settings-btn" @click="$emit('openSettings')" :title="t('settings.title')">⚙</button>
+      <button class="footer-btn icon-only" @click="$emit('openSettings')" :title="t('settings.title')">
+        <Icon name="settings" :size="15" />
+      </button>
       <span class="counts">
         {{ t('tasks.todoCount', { n: totals.todo }) }} · {{ t('tasks.doneCount', { n: totals.done }) }}
       </span>
       <span class="spacer"></span>
       <button
-        class="footer-btn pin-btn"
+        class="footer-btn icon-only pin-btn"
         :class="{ active: settings.alwaysOnTop }"
         @click="settings.toggleAlwaysOnTop"
         :title="settings.alwaysOnTop ? t('window.unpin') : t('window.pin')"
       >
-        <!-- Drawing-pin glyph in two states: filled (pinned, accent colour)
-             vs outline-tilted (floating). Inline SVG keeps the style on
-             brand with the other icons. -->
-        <svg v-if="settings.alwaysOnTop" viewBox="0 0 24 24" class="pin-icon" aria-hidden="true">
-          <path fill="currentColor" d="M14 4l6 6-3 3-1.5-1.5-3.5 3.5V21h-2v-5.5L7 19l-3-3 3.5-3.5L6 11l3-3 5-4z" transform="rotate(-15 12 12)"/>
-        </svg>
-        <svg v-else viewBox="0 0 24 24" class="pin-icon" aria-hidden="true">
-          <path
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linejoin="round"
-            d="M14 4l6 6-3 3-1.5-1.5-3.5 3.5V21h-2v-5.5L7 19l-3-3 3.5-3.5L6 11l3-3 5-4z"
-            transform="rotate(-15 12 12)"
-          />
-        </svg>
+        <Icon :name="settings.alwaysOnTop ? 'pin' : 'pin-off'" :size="15" />
       </button>
-      <button class="footer-btn" @click="tasks.refresh" :title="t('tasks.refreshTitle')">↻</button>
+      <button class="footer-btn icon-only" @click="tasks.refresh" :title="t('tasks.refreshTitle')">
+        <Icon name="refresh" :size="15" />
+      </button>
     </div>
   </div>
 </template>
@@ -160,12 +152,13 @@ async function submit() {
 .add-row button {
   width: 32px;
   padding: 0;
-  font-size: 18px;
-  font-weight: 300;
   background: var(--surface-strong);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .add-row button:hover {
   background: var(--accent-soft);
@@ -220,25 +213,15 @@ async function submit() {
   border-color: var(--border-strong);
 }
 
-.settings-btn {
-  font-size: 0.95rem;
+.footer-btn.icon-only {
   width: 28px;
-  padding: 0.2rem 0;
-  text-align: center;
-}
-
-.pin-btn {
-  width: 28px;
-  padding: 0.2rem 0;
+  padding: 0;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.pin-btn .pin-icon {
-  width: 14px;
-  height: 14px;
-  display: block;
-}
+
 .pin-btn.active {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 30%, var(--border));

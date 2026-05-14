@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../stores/settings';
 import { useTaskStore } from '../stores/tasks';
+import Icon from './icons/Icon.vue';
 
 defineEmits<{ openSettings: [] }>();
 
@@ -30,11 +31,19 @@ async function addFile() {
         </template>
       </p>
       <div class="actions">
-        <button @click="addFolder">{{ t('empty.addFolder') }}</button>
-        <button @click="addFile">{{ t('empty.addFile') }}</button>
+        <button @click="addFolder">
+          <Icon name="folder" :size="15" />
+          <span>{{ t('empty.addFolder') }}</span>
+        </button>
+        <button @click="addFile">
+          <Icon name="file" :size="15" />
+          <span>{{ t('empty.addFile') }}</span>
+        </button>
       </div>
     </div>
-    <button class="settings-corner" @click="$emit('openSettings')" :title="t('settings.title')">⚙</button>
+    <button class="settings-corner" @click="$emit('openSettings')" :title="t('settings.title')">
+      <Icon name="settings" :size="15" />
+    </button>
   </div>
 </template>
 
@@ -89,6 +98,9 @@ async function addFile() {
   font-size: 0.875rem;
   color: var(--text);
   transition: background 140ms ease-out, box-shadow 140ms ease-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .empty-card button:hover {
@@ -103,14 +115,15 @@ async function addFile() {
   width: 28px;
   height: 28px;
   padding: 0;
-  font-size: 0.95rem;
-  line-height: 1;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text-muted);
   opacity: 0.7;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .settings-corner:hover { opacity: 1; background: var(--surface-strong); color: var(--text); }
 </style>

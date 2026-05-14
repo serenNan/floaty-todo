@@ -5,8 +5,8 @@ export default {
   empty: {
     title: 'Floaty Todo',
     blurb: '添加第一个任务源。\n可以是一个文件夹（递归扫描）或单个 {ext} 文件。',
-    addFolder: '📁 文件夹…',
-    addFile: '📄 文件…',
+    addFolder: '文件夹…',
+    addFile: '文件…',
   },
   tasks: {
     loading: '加载中…',
@@ -74,8 +74,8 @@ export default {
     },
     sources: {
       empty: '还没有任何任务源。',
-      addFolder: '+ 文件夹',
-      addFile: '+ 文件',
+      addFolder: '添加文件夹',
+      addFile: '添加文件',
       defaultBadge: '默认',
       setDefault: '设为默认',
       openVscode: '用 VS Code 打开',

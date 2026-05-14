@@ -7,6 +7,8 @@ import { setLocale, SUPPORTED_LOCALES, type Locale } from '../i18n';
 import { api } from '../services/tauri-api';
 import { confirm } from '../composables/useConfirm';
 import QuickActionIcon from '../components/icons/QuickActionIcon.vue';
+import Icon from '../components/icons/Icon.vue';
+import type { IconName } from '../components/icons/Icon.vue';
 import type { QuickActionKind, Source } from '../types/task';
 
 defineEmits<{ back: [] }>();
@@ -20,10 +22,10 @@ const labelDraft = ref('');
 const rootDraft = ref('');
 const actionError = ref<string | null>(null);
 
-const themes: Array<{ value: 'system' | 'light' | 'dark'; key: 'system' | 'light' | 'dark'; icon: string }> = [
-  { value: 'system', key: 'system', icon: '🖥' },
-  { value: 'light', key: 'light', icon: '☀' },
-  { value: 'dark', key: 'dark', icon: '🌙' },
+const themes: Array<{ value: 'system' | 'light' | 'dark'; key: 'system' | 'light' | 'dark'; icon: IconName }> = [
+  { value: 'system', key: 'system', icon: 'monitor' },
+  { value: 'light', key: 'light', icon: 'sun' },
+  { value: 'dark', key: 'dark', icon: 'moon' },
 ];
 
 const languages: Array<{ value: Locale; label: string }> = [
@@ -144,7 +146,9 @@ async function openTerminal(s: Source) {
 <template>
   <div class="settings">
     <header class="head">
-      <button class="back-btn" @click="$emit('back')" :title="t('settings.back')">←</button>
+      <button class="back-btn" @click="$emit('back')" :title="t('settings.back')">
+        <Icon name="arrow-left" :size="16" />
+      </button>
       <h2>{{ t('settings.title') }}</h2>
     </header>
 
@@ -162,7 +166,7 @@ async function openTerminal(s: Source) {
               @click="setTheme(th.value)"
               :title="t(`settings.theme.${th.key}`)"
             >
-              <span class="seg-icon">{{ th.icon }}</span>
+              <Icon :name="th.icon" :size="14" class="seg-icon" />
               <span class="seg-label">{{ t(`settings.theme.${th.key}`) }}</span>
             </button>
           </div>
@@ -207,15 +211,23 @@ async function openTerminal(s: Source) {
       <section class="section">
         <h3>{{ t('settings.sections.sources') }}</h3>
         <div class="source-toolbar">
-          <button @click="addFolder">{{ t('settings.sources.addFolder') }}</button>
-          <button @click="addFile">{{ t('settings.sources.addFile') }}</button>
+          <button @click="addFolder">
+            <Icon name="folder" :size="14" />
+            <span>{{ t('settings.sources.addFolder') }}</span>
+          </button>
+          <button @click="addFile">
+            <Icon name="file" :size="14" />
+            <span>{{ t('settings.sources.addFile') }}</span>
+          </button>
         </div>
 
         <p v-if="settings.sources.length === 0" class="muted">{{ t('settings.sources.empty') }}</p>
 
         <div v-for="s in settings.sources" :key="s.id" class="source-card">
           <div class="src-row">
-            <span class="src-icon">{{ s.kind === 'folder' ? '📁' : '📄' }}</span>
+            <span class="src-icon">
+              <Icon :name="s.kind === 'folder' ? 'folder' : 'file'" :size="16" />
+            </span>
             <div class="src-main">
               <div class="src-label">
                 {{ displayLabel(s) }}
@@ -224,12 +236,20 @@ async function openTerminal(s: Source) {
               <div class="src-path" :title="s.path">{{ s.path }}</div>
             </div>
             <div class="src-actions">
-              <button class="icon-btn" @click="openVscode(s)" :title="t('settings.sources.openVscode')">⎘</button>
-              <button class="icon-btn" @click="openTerminal(s)" :title="t('settings.sources.openTerminal')">▷</button>
+              <button class="icon-btn" @click="openVscode(s)" :title="t('settings.sources.openVscode')">
+                <QuickActionIcon kind="vscode" />
+              </button>
+              <button class="icon-btn" @click="openTerminal(s)" :title="t('settings.sources.openTerminal')">
+                <QuickActionIcon kind="terminal" />
+              </button>
               <button class="icon-btn" :class="{ active: editingId === s.id }"
                 @click="editingId === s.id ? cancelEdit() : startEdit(s)"
-                :title="t('settings.sources.edit')">📝</button>
-              <button class="icon-btn danger" @click="removeSource(s)" :title="t('settings.sources.remove')">🗑</button>
+                :title="t('settings.sources.edit')">
+                <Icon name="pencil" :size="13" />
+              </button>
+              <button class="icon-btn danger" @click="removeSource(s)" :title="t('settings.sources.remove')">
+                <Icon name="trash" :size="13" />
+              </button>
             </div>
           </div>
 
@@ -243,7 +263,9 @@ async function openTerminal(s: Source) {
               <span class="hint">{{ t('source.fields.projectRootHint') }}</span>
               <span class="root-row">
                 <input v-model="rootDraft" :placeholder="s.path" />
-                <button type="button" @click="pickRoot" :title="t('source.actions.pickFolder')">📁</button>
+                <button type="button" class="pick-btn" @click="pickRoot" :title="t('source.actions.pickFolder')">
+                  <Icon name="folder" :size="13" />
+                </button>
               </span>
             </label>
             <div class="edit-actions">
@@ -301,8 +323,9 @@ async function openTerminal(s: Source) {
   border-radius: 5px;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .back-btn:hover { background: var(--surface); border-color: var(--border); color: var(--text); }
 
@@ -339,9 +362,9 @@ async function openTerminal(s: Source) {
   overflow: hidden;
 }
 .segmented button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   padding: 0.35rem 0.55rem;
   background: transparent;
   border: none;
@@ -380,6 +403,9 @@ select {
   color: var(--text);
   font-size: 0.8rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .source-toolbar button:hover { background: var(--accent-soft); }
 
@@ -397,7 +423,12 @@ select {
   gap: 0.45rem;
   padding: 0.5rem 0.6rem;
 }
-.src-icon { font-size: 0.95rem; flex-shrink: 0; }
+.src-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+}
 .src-main { flex: 1; min-width: 0; }
 .src-label {
   font-size: 0.86rem;
@@ -433,8 +464,9 @@ select {
   border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.82rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .icon-btn:hover {
   background: var(--surface);
@@ -483,13 +515,18 @@ select {
 .src-editor input:focus { outline: none; border-color: var(--border-strong); }
 .root-row { display: flex; gap: 4px; }
 .root-row input { flex: 1; }
-.root-row button {
+.root-row .pick-btn {
   width: 30px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 5px;
   cursor: pointer;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+.root-row .pick-btn:hover { background: var(--accent-soft); color: var(--text); }
 
 .edit-actions {
   display: flex;

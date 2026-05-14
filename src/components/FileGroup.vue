@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import type { Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import TaskItem from './TaskItem.vue';
+import Icon from './icons/Icon.vue';
 
 const props = withDefaults(defineProps<{
   /// The source this file belongs to. Used to compute a relative path for the
@@ -73,7 +74,7 @@ async function clearLabel() {
   <div class="file-group" :class="{ collapsed }">
     <header class="head">
       <button class="caret" @click="collapsed = !collapsed" :title="collapsed ? t('source.expand') : t('source.collapse')">
-        {{ collapsed ? '▸' : '▾' }}
+        <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="13" />
       </button>
       <span class="name" :title="filePath">{{ displayLabel }}</span>
       <span class="count">{{ counts.todo }}<span v-if="counts.done" class="done">·{{ counts.done }}✓</span></span>
@@ -82,7 +83,9 @@ async function clearLabel() {
         :class="{ active: editing }"
         @click="editing ? cancelEdit() : startEdit()"
         :title="t('file.editLabel')"
-      >✎</button>
+      >
+        <Icon name="pencil" :size="12" />
+      </button>
     </header>
 
     <div v-if="editing" class="editor">
@@ -93,7 +96,9 @@ async function clearLabel() {
         @keydown.escape.prevent="cancelEdit"
         autofocus
       />
-      <button class="ghost" @click="clearLabel" :title="t('file.resetLabel')">↺</button>
+      <button class="ghost icon" @click="clearLabel" :title="t('file.resetLabel')">
+        <Icon name="rotate-ccw" :size="13" />
+      </button>
       <button class="primary" @click="saveLabel">{{ t('source.actions.save') }}</button>
     </div>
 
@@ -122,14 +127,16 @@ async function clearLabel() {
 }
 
 .caret {
-  width: 16px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.7rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .caret:hover { color: var(--text); }
 
@@ -158,8 +165,9 @@ async function clearLabel() {
   border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.75rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   transition: opacity 120ms;
 }
@@ -205,6 +213,12 @@ async function clearLabel() {
   border-radius: 5px;
   color: var(--text);
   cursor: pointer;
+}
+.editor button.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.28rem;
 }
 .editor button.primary {
   background: var(--accent);

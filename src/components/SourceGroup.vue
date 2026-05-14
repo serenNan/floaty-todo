@@ -8,6 +8,7 @@ import { confirm } from '../composables/useConfirm';
 import FileGroup from './FileGroup.vue';
 import TaskItem from './TaskItem.vue';
 import QuickActionIcon from './icons/QuickActionIcon.vue';
+import Icon from './icons/Icon.vue';
 
 /// Auto-collapse every FileGroup the first time we render a source whose
 /// task count exceeds this threshold. Keeps the DOM tree small enough to
@@ -137,12 +138,16 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
   <section class="group" :class="{ collapsed }">
     <header class="group-head">
       <button class="caret" @click="collapsed = !collapsed" :title="collapsed ? t('source.expand') : t('source.collapse')">
-        {{ collapsed ? '▸' : '▾' }}
+        <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="14" />
       </button>
-      <span class="kind-icon">{{ source.kind === 'folder' ? '📁' : '📄' }}</span>
+      <span class="kind-icon">
+        <Icon :name="source.kind === 'folder' ? 'folder' : 'file'" :size="15" />
+      </span>
       <span class="label" :title="source.path">{{ displayLabel }}</span>
       <span v-if="isDefault" class="badge" :title="t('source.defaultBadge')">{{ t('source.defaultBadge') }}</span>
-      <span v-if="isScanning" class="scanning" :title="t('source.scanning')">⟳</span>
+      <span v-if="isScanning" class="scanning" :title="t('source.scanning')">
+        <Icon name="loader" :size="14" />
+      </span>
       <span class="counts">
         {{ counts.todo }}<span v-if="counts.done"> · {{ counts.done }}✓</span>
       </span>
@@ -156,7 +161,9 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
         >
           <QuickActionIcon :kind="a.kind" />
         </button>
-        <button class="icon-btn" :class="{ active: editing }" @click="editing ? cancelEdit() : startEdit()" :title="t('source.edit')">⋯</button>
+        <button class="icon-btn" :class="{ active: editing }" @click="editing ? cancelEdit() : startEdit()" :title="t('source.edit')">
+          <Icon name="more-horizontal" :size="14" />
+        </button>
       </div>
     </header>
 
@@ -169,7 +176,9 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
         {{ t('source.fields.projectRoot') }} <span class="hint">{{ t('source.fields.projectRootHint') }}</span>
         <span class="root-row">
           <input v-model="rootDraft" :placeholder="source.path" />
-          <button type="button" @click="pickRoot" :title="t('source.actions.pickFolder')">📁</button>
+          <button type="button" class="pick-btn" @click="pickRoot" :title="t('source.actions.pickFolder')">
+            <Icon name="folder" :size="14" />
+          </button>
         </span>
       </label>
       <div class="editor-actions">
@@ -229,17 +238,25 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
 }
 
 .caret {
-  width: 18px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .caret:hover { color: var(--text); }
 
-.kind-icon { font-size: 0.85rem; opacity: 0.85; }
+.kind-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  opacity: 0.9;
+}
 
 .label {
   flex: 1;
@@ -260,7 +277,7 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
 }
 
 .scanning {
-  font-size: 0.85rem;
+  display: inline-flex;
   color: var(--accent);
   flex-shrink: 0;
   animation: spin 1.1s linear infinite;
@@ -357,13 +374,18 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
 
 .root-row { display: flex; gap: 4px; }
 .root-row input { flex: 1; }
-.root-row button {
+.root-row .pick-btn {
   width: 30px;
   background: var(--surface-strong);
   border: 1px solid var(--border);
   border-radius: 5px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
 }
+.root-row .pick-btn:hover { background: var(--accent-soft); color: var(--text); }
 
 .editor-actions {
   display: flex;

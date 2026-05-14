@@ -5,8 +5,8 @@ export default {
   empty: {
     title: 'Floaty Todo',
     blurb: 'Add your first todo source.\nA folder (recursive) or a single {ext} file.',
-    addFolder: '📁 Folder…',
-    addFile: '📄 File…',
+    addFolder: 'Folder…',
+    addFile: 'File…',
   },
   tasks: {
     loading: 'Loading…',
@@ -74,8 +74,8 @@ export default {
     },
     sources: {
       empty: 'No sources yet.',
-      addFolder: '+ Folder',
-      addFile: '+ File',
+      addFolder: 'Add folder',
+      addFile: 'Add file',
       defaultBadge: 'default',
       setDefault: 'Set default',
       openVscode: 'Open in VS Code',

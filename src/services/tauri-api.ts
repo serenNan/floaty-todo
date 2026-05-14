@@ -18,4 +18,7 @@ export const api = {
 
   onTasksUpdated: (cb: () => void): Promise<UnlistenFn> =>
     listen('tasks-updated', cb),
+
+  onSwitchVaultRequested: (cb: () => void): Promise<UnlistenFn> =>
+    listen('request-switch-vault', cb),
 };

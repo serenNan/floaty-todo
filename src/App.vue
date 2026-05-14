@@ -24,15 +24,19 @@ function cycleTheme() {
   setTheme(next);
 }
 
-let unlisten: (() => void) | null = null;
+const unlisteners: Array<() => void> = [];
 
 onMounted(async () => {
   await settings.load();
   if (hasVault.value) await tasks.refresh();
-  unlisten = await api.onTasksUpdated(() => { tasks.refresh(); });
+  unlisteners.push(await api.onTasksUpdated(() => { tasks.refresh(); }));
+  unlisteners.push(await api.onSwitchVaultRequested(async () => {
+    const ok = await settings.pickAndSetVault();
+    if (ok) await tasks.refresh();
+  }));
 });
 
-onUnmounted(() => { unlisten?.(); });
+onUnmounted(() => { unlisteners.forEach(u => u()); });
 </script>
 
 <template>

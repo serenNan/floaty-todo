@@ -97,8 +97,9 @@ pub fn run() {
             // ----- System tray
             let show_item = MenuItem::with_id(app, "show", "Show window", true, None::<&str>)?;
             let hide_item = MenuItem::with_id(app, "hide", "Hide window", true, None::<&str>)?;
+            let switch_vault_item = MenuItem::with_id(app, "switch_vault", "Switch vault folder…", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_item, &hide_item, &quit_item])?;
+            let menu = Menu::with_items(app, &[&show_item, &hide_item, &switch_vault_item, &quit_item])?;
 
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
@@ -110,6 +111,10 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => toggle_window(app, true),
                     "hide" => toggle_window(app, false),
+                    "switch_vault" => {
+                        toggle_window(app, true);
+                        let _ = app.emit("request-switch-vault", ());
+                    }
                     "quit" => app.exit(0),
                     _ => {}
                 })

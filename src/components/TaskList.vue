@@ -47,11 +47,12 @@ async function switchVault() {
         {{ tasks.tasks.filter(t => !t.completed).length }} todo
         · {{ tasks.tasks.filter(t => t.completed).length }} done
       </span>
-      <span class="vault" :title="settings.config?.vault_path ?? ''">📁 {{ vaultName }}</span>
-      <span class="actions">
-        <button @click="switchVault" title="Switch vault folder">📂</button>
-        <button @click="tasks.refresh" title="Refresh">↻</button>
-      </span>
+      <button
+        class="vault-switch"
+        :title="`Vault: ${settings.config?.vault_path ?? '(none)'}\nClick to switch folder`"
+        @click="switchVault"
+      >📁 {{ vaultName }} ▾</button>
+      <button class="refresh" @click="tasks.refresh" title="Refresh (re-read all .md files)">↻</button>
     </div>
   </div>
 </template>
@@ -148,22 +149,31 @@ async function switchVault() {
   flex-shrink: 0;
 }
 
-.footer .vault {
+.footer .vault-switch {
   flex: 0 1 auto;
-  max-width: 40%;
+  max-width: 55%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.8;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 120ms ease-out;
 }
 
-.footer .actions {
-  display: flex;
-  gap: 0.25rem;
+.footer .vault-switch:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--border-strong);
 }
 
-.footer button {
-  padding: 0.15rem 0.4rem;
+.footer .refresh {
+  padding: 0.2rem 0.45rem;
   font-size: 0.85rem;
+  flex-shrink: 0;
 }
 </style>

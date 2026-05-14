@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Floaty Todo",
-        "width": 800,
-        "height": 600
+        "width": 380,
+        "height": 600,
+        "resizable": true,
+        "alwaysOnTop": true,
+        "decorations": true,
+        "visible": true,
+        "skipTaskbar": false
       }
     ],
     "security": {

@@ -1,5 +1,16 @@
 # 变更日志
 
+## 2026-05-14 wire app: commands invoke_handler, tray icon, watcher bridge
+
+- `lib.rs` rewritten: 8 commands registered in `invoke_handler!` (`get_tasks`, `get_config`, `update_config`, `toggle_task`, `add_task`, `set_vault`, `show_window`, `hide_window`)
+- Tray menu with Show window / Hide window / Quit items; left-click tray icon toggles window visibility
+- Watcher spawned in `setup` hook: initial `rebuild_from_vault` in background thread, then `start_watching` wired to emit `tasks-updated` events on file changes
+- `tauri.conf.json` window now 380×600, `alwaysOnTop: true`, labeled `"main"` (was unlabeled 800×600)
+- Capabilities updated: `core:default + dialog:default` (dropped unused `opener:default`)
+- `tauri = { version = "2", features = ["tray-icon"] }` added to Cargo.toml
+- `tauri-plugin-opener` no longer initialized in `lib.rs` (dep left in Cargo.toml as warning-only); `tauri-plugin-dialog` now active
+- `AppConfig` unused import removed; zero warnings on `cargo build`
+
 ## 2026-05-14 add Tauri IPC commands (commands.rs + AppState)
 
 - `AppState` holds `Arc<RwLock<TaskRegistry>>`, `Arc<RwLock<AppConfig>>`, `IgnoreHashes`, and `config_path: PathBuf`

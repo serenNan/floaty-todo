@@ -3,7 +3,7 @@
 ## Tech Stack
 
 - **Frontend:** Vue 3 + TypeScript, Vite 6, Pinia
-- **Backend:** Tauri 2 (Rust), `tauri-plugin-opener`
+- **Backend:** Tauri 2 (Rust), `tauri-plugin-dialog` (file picker)
 - **Package manager:** npm
 - **Identifier:** `com.serendipity.floaty-todo`
 
@@ -12,7 +12,7 @@
 ```
 src/              # Vue frontend
 src-tauri/        # Rust backend
-  src/lib.rs      # Module declarations + Tauri Builder setup
+  src/lib.rs      # App init, tray, watcher dispatch + invoke_handler registration
   src/main.rs     # Entry point (calls floaty_todo_lib::run())
   src/commands.rs # Tauri IPC commands + AppState (registry/config/watcher glue)
   src/types.rs    # Task, AppConfig, ContentHash
@@ -22,7 +22,7 @@ src-tauri/        # Rust backend
   src/config.rs   # AppConfig load/save (JSON, tolerant)
   src/registry.rs # In-memory TaskRegistry (vault scan + per-file refresh)
   src/watcher.rs  # Debounced fs watcher + IgnoreHashes loop prevention
-  tauri.conf.json # App config (productName, identifier, devUrl)
+  tauri.conf.json # App config (productName, identifier, devUrl, window 380×600 alwaysOnTop)
   Cargo.toml      # Rust deps (crate name: floaty-todo, lib: floaty_todo_lib)
 ```
 

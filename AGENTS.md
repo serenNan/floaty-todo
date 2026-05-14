@@ -20,8 +20,9 @@ src-tauri/        # Rust backend
   src/parser.rs   # Markdown task parser (parse_line / parse_file)
   src/storage.rs  # Atomic file writes: toggle_task / append_task
   src/config.rs   # AppConfig load/save (JSON, tolerant)
-  src/registry.rs # In-memory TaskRegistry (vault scan + per-file refresh)
-  src/watcher.rs  # Debounced fs watcher + IgnoreHashes loop prevention
+  src/registry.rs # In-memory TaskRegistry (per-source scan + per-file refresh)
+  src/watcher.rs  # Debounced fs watcher (one per source) + IgnoreHashes loop prevention
+  src/shell.rs    # External-process launchers (VS Code / terminal) with platform cascade
   tauri.conf.json # App config (productName, identifier, devUrl, window 340×520 transparent decorations:false skipTaskbar alwaysOnTop)
   Cargo.toml      # Rust deps (crate name: floaty-todo, lib: floaty_todo_lib)
 ```
@@ -40,7 +41,8 @@ Tasks reference their source via `Task.source_id`. The registry keys files by `(
 
 | Module | Role |
 |---|---|
-| `commands` | `AppState` + Tauri commands: `get_tasks`/`toggle_task`/`add_task`, source CRUD (`list_sources`/`add_source`/`remove_source`/`update_source`/`set_default_source`), window control |
+| `commands` | `AppState` + Tauri commands: `get_tasks`/`toggle_task`/`add_task`, source CRUD (`list_sources`/`add_source`/`remove_source`/`update_source`/`set_default_source`), shell actions (`open_in_vscode`/`open_in_terminal`), window control |
+| `shell` | Side-effect launchers: `open_vscode(path)` (Windows `code.cmd`, else `code`), `open_terminal(path)` (Windows: wt → pwsh → powershell; macOS: `open -a Terminal`; Linux: x-terminal-emulator → gnome-terminal → konsole → xterm) |
 | `registry` | `TaskRegistry` keyed by `(source_id, canonical_path)`; `rebuild_from_sources` / `rebuild_source` / `refresh_file(source, file)` |
 | `watcher` | `start_watching_source` (Folder = recursive, File = parent dir + filename filter) + `IgnoreHashes` for write-loop prevention; one `WatcherHandle` per source in `WatcherSlots: Arc<Mutex<HashMap<source_id, WatcherHandle>>>` |
 | `storage` | `toggle_task` / `append_task` — atomic writes via `tempfile::NamedTempFile` |

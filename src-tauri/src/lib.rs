@@ -3,6 +3,7 @@ mod config;
 mod error;
 mod parser;
 mod registry;
+mod shell;
 mod storage;
 mod types;
 mod watcher;
@@ -153,6 +154,8 @@ pub fn run() {
             commands::remove_source,
             commands::update_source,
             commands::set_default_source,
+            commands::open_in_vscode,
+            commands::open_in_terminal,
             commands::show_window,
             commands::hide_window,
         ])

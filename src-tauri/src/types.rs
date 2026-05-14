@@ -57,18 +57,6 @@ impl Source {
         }
     }
 
-    /// Display label, falling back to the filename of `path`.
-    pub fn effective_label(&self) -> String {
-        if let Some(l) = &self.label {
-            if !l.trim().is_empty() {
-                return l.clone();
-            }
-        }
-        self.path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| self.path.to_string_lossy().to_string())
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

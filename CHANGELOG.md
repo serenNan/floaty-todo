@@ -1,5 +1,29 @@
 # 变更日志
 
+## 2026-05-14 open_in_vscode / open_in_terminal commands
+
+Each `Source` now exposes two side-effect commands that launch external tools
+at its `effective_project_root()` (the configured `project_root`, or default
+to `path` for Folder sources / `path.parent()` for File sources).
+
+- `src-tauri/src/shell.rs`: new module — `open_vscode(path)` and
+  `open_terminal(path)`; cross-platform terminal cascade tries
+  Windows Terminal → pwsh.exe → powershell.exe on Windows, `open -a Terminal`
+  on macOS, and `x-terminal-emulator` / `gnome-terminal` / `konsole` / `xterm`
+  on Linux; first successful spawn wins, all-fail surfaces as
+  `AppError::CommandFailed` with the attempted-binary list (so the UI can
+  prompt the user to install `code` / set up `wt`)
+- `src-tauri/src/lib.rs`: `mod shell;`; registered the two commands in
+  `invoke_handler!`
+- `src-tauri/src/commands.rs`: new `open_in_vscode(source_id)` and
+  `open_in_terminal(source_id)` — both resolve the source via
+  `find_source_by_id`, then call into `shell`
+- `src-tauri/src/types.rs`: dropped unused `effective_label` (frontend does
+  the label-fallback)
+- `src/services/tauri-api.ts`: added `openInVscode(sourceId)` and
+  `openInTerminal(sourceId)`
+- 2 new unit tests on the platform-attempt cascade
+
 ## 2026-05-14 multi-source aggregation (folder + single-file sources)
 
 Replaces the single-vault model with a user-configurable list of task sources. Each source is either a recursive folder scan or a single `.md` file, with an optional `project_root` for future "Open in VS Code / terminal" actions.

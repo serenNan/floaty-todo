@@ -226,6 +226,25 @@ pub fn set_default_source(
     Ok(())
 }
 
+/// Spawn `code <path>` for the source's effective project root.
+/// On Windows the binary is `code.cmd` (a npm-style shim); on other platforms
+/// it's plain `code`. Returns `CommandFailed` with a hint if `code` is not on PATH.
+#[tauri::command]
+pub fn open_in_vscode(state: State<'_, AppState>, source_id: String) -> Result<()> {
+    let source = find_source_by_id(&state, &source_id)?;
+    let target = source.effective_project_root();
+    crate::shell::open_vscode(&target)
+}
+
+/// Open a terminal at the source's effective project root. Tries platform-
+/// specific terminals in order of preference; the first one that spawns wins.
+#[tauri::command]
+pub fn open_in_terminal(state: State<'_, AppState>, source_id: String) -> Result<()> {
+    let source = find_source_by_id(&state, &source_id)?;
+    let target = source.effective_project_root();
+    crate::shell::open_terminal(&target)
+}
+
 #[tauri::command]
 pub fn show_window(app: AppHandle) -> Result<()> {
     if let Some(w) = app.get_webview_window("main") {

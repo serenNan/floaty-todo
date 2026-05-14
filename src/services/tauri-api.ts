@@ -38,6 +38,9 @@ export const api = {
   setDefaultSource: (sourceId: string | null) =>
     invoke<void>('set_default_source', { sourceId }),
 
+  openInVscode: (sourceId: string) => invoke<void>('open_in_vscode', { sourceId }),
+  openInTerminal: (sourceId: string) => invoke<void>('open_in_terminal', { sourceId }),
+
   pickFolder: async (): Promise<string | null> => {
     const sel = await open({ directory: true, multiple: false });
     return typeof sel === 'string' ? sel : null;

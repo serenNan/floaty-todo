@@ -4,7 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + Vue + Typescript App</title>
+    <title>Floaty Todo</title>
+    <!-- FOUC guard: resolve theme synchronously before any CSS/JS loads -->
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('floaty.theme') || 'system';
+          var theme = stored === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : stored;
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) { /* silent: fall back to light */ }
+      })();
+    </script>
   </head>
 
   <body>

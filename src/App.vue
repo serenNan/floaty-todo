@@ -5,6 +5,7 @@ import { useTaskStore } from './stores/tasks';
 import { api } from './services/tauri-api';
 import EmptyState from './components/EmptyState.vue';
 import TaskList from './components/TaskList.vue';
+import TitleBar from './components/TitleBar.vue';
 
 const settings = useSettingsStore();
 const tasks = useTaskStore();
@@ -23,11 +24,24 @@ onUnmounted(() => { unlisten?.(); });
 
 <template>
   <main>
-    <EmptyState v-if="!hasVault" />
-    <TaskList v-else />
+    <TitleBar />
+    <div class="content">
+      <Transition name="fade" mode="out-in">
+        <EmptyState v-if="!hasVault" key="empty" />
+        <TaskList v-else key="list" />
+      </Transition>
+    </div>
   </main>
 </template>
 
 <style>
 @import './styles/main.css';
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
 </style>

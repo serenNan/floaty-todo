@@ -22,7 +22,7 @@ src-tauri/        # Rust backend
   src/config.rs   # AppConfig load/save (JSON, tolerant)
   src/registry.rs # In-memory TaskRegistry (vault scan + per-file refresh)
   src/watcher.rs  # Debounced fs watcher + IgnoreHashes loop prevention
-  tauri.conf.json # App config (productName, identifier, devUrl, window 380×600 alwaysOnTop)
+  tauri.conf.json # App config (productName, identifier, devUrl, window 340×520 transparent decorations:false skipTaskbar alwaysOnTop)
   Cargo.toml      # Rust deps (crate name: floaty-todo, lib: floaty_todo_lib)
 ```
 
@@ -48,6 +48,8 @@ src-tauri/        # Rust backend
 | `src/stores/tasks.ts` | `useTaskStore` — `tasks` / `loading` / `error`; `refresh` / `toggle` / `add` |
 | `src/stores/settings.ts` | `useSettingsStore` — `config`; `load` / `pickAndSetVault` |
 | `src/main.ts` | App entry — wires `createPinia()` then mounts `App` |
+| `src/composables/useTheme.ts` | Theme composable — `currentTheme` / `effectiveTheme` / `setTheme`; localStorage `floaty.theme`, system media query listener |
+| `src/components/TitleBar.vue` | Custom 32px title bar — drag region, theme cycle (☀/🌙/🖥), minimize, hide-to-tray close |
 
 ## Build Commands
 

@@ -14,13 +14,17 @@
       {
         "label": "main",
         "title": "Floaty Todo",
-        "width": 380,
-        "height": 600,
+        "width": 340,
+        "height": 520,
+        "minWidth": 280,
+        "minHeight": 360,
         "resizable": true,
         "alwaysOnTop": true,
-        "decorations": true,
+        "decorations": false,
+        "transparent": true,
         "visible": true,
-        "skipTaskbar": false
+        "skipTaskbar": true,
+        "shadow": false
       }
     ],
     "security": {

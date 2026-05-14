@@ -29,19 +29,24 @@ async function switchVault() {
 <template>
   <div class="list">
     <form class="add-row" @submit.prevent="submit">
-      <input v-model="newText" placeholder="Add task, Enter to confirm…" />
-      <button type="submit">+</button>
+      <input v-model="newText" placeholder="Add task…" />
+      <button type="submit" title="Add task">+</button>
     </form>
 
-    <div v-if="tasks.loading" class="hint">Loading…</div>
-    <div v-else-if="tasks.error" class="error">{{ tasks.error }}</div>
-    <div v-else-if="tasks.tasks.length === 0" class="hint">No tasks yet.</div>
-    <div v-else class="rows">
-      <TaskItem v-for="t in tasks.tasks" :key="t.id" :task="t" />
+    <div class="rows-wrap">
+      <div v-if="tasks.loading" class="hint">Loading…</div>
+      <div v-else-if="tasks.error" class="error">{{ tasks.error }}</div>
+      <div v-else-if="tasks.tasks.length === 0" class="hint">No tasks yet.</div>
+      <div v-else class="rows">
+        <TaskItem v-for="t in tasks.tasks" :key="t.id" :task="t" />
+      </div>
     </div>
 
     <div class="footer">
-      <span class="counts">{{ tasks.tasks.filter(t => !t.completed).length }} todo · {{ tasks.tasks.filter(t => t.completed).length }} done</span>
+      <span class="counts">
+        {{ tasks.tasks.filter(t => !t.completed).length }} todo
+        · {{ tasks.tasks.filter(t => t.completed).length }} done
+      </span>
       <span class="vault" :title="settings.config?.vault_path ?? ''">📁 {{ vaultName }}</span>
       <span class="actions">
         <button @click="switchVault" title="Switch vault folder">📂</button>
@@ -52,14 +57,113 @@ async function switchVault() {
 </template>
 
 <style scoped>
-.list { display: flex; flex-direction: column; height: 100vh; }
-.add-row { display: flex; padding: 0.5rem; gap: 0.4rem; border-bottom: 1px solid var(--border); }
-.add-row input { flex: 1; padding: 0.4rem; }
-.rows { flex: 1; overflow-y: auto; }
-.hint, .error { padding: 1rem; text-align: center; color: var(--fg-muted); }
-.error { color: #c33; }
-.footer { display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; padding: 0.4rem 0.6rem; border-top: 1px solid var(--border); font-size: 0.85em; color: var(--fg-muted); }
-.footer .vault { flex: 0 1 auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.8; }
-.footer .actions { display: flex; gap: 0.3rem; }
-.footer button { padding: 0.2rem 0.45rem; }
+.list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.add-row {
+  display: flex;
+  padding: 0.5rem;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.add-row input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  transition: border-color 120ms ease-out;
+}
+
+.add-row input:focus {
+  outline: none;
+  border-color: var(--border-strong);
+}
+
+.add-row input::placeholder {
+  color: var(--text-muted);
+}
+
+.add-row button {
+  width: 32px;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 300;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+
+.add-row button:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.rows-wrap {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  background: var(--surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.rows {
+  padding: 0.3rem 0;
+}
+
+.hint {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  padding: 1rem;
+  text-align: center;
+  color: #ef4444;
+  font-size: 0.875rem;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.footer .vault {
+  flex: 0 1 auto;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.footer .actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.footer button {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.85rem;
+}
 </style>

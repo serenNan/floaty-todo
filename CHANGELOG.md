@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-05-14 add Tauri IPC commands (commands.rs + AppState)
+
+- `AppState` holds `Arc<RwLock<TaskRegistry>>`, `Arc<RwLock<AppConfig>>`, `IgnoreHashes`, and `config_path: PathBuf`
+- Commands exposed: `get_tasks`, `get_config`, `update_config`, `toggle_task`, `add_task`, `set_vault`, `show_window`, `hide_window`
+- `set_vault` persists config, rebuilds registry from new vault root, and emits `vault-changed` + `tasks-updated` events to the frontend
+- `toggle_task` / `add_task` register the new content hash into `IgnoreHashes` before writing to prevent watcher re-fire loop
+- `mod commands;` added to `lib.rs`; commands wired into `invoke_handler!` in Task 9
+- Prior fix (commit `623b0e8`): `tempfile` promoted from `[dev-dependencies]` to `[dependencies]` — `atomic_write` in `storage.rs` uses it at runtime, not only in tests
+
 ## 2026-05-14 add fs watcher (debounced + loop prevention)
 
 - `start_watching(vault, ignore, on_event)` wraps `notify-debouncer-full` with 200ms debounce; emits `WatchEvent::Changed` or `WatchEvent::Deleted` for markdown paths only

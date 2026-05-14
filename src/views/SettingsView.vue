@@ -213,6 +213,24 @@ async function revealSource(s: Source) {
         </div>
       </section>
 
+      <!-- Behavior -->
+      <section class="section">
+        <h3>{{ t('settings.behavior') }}</h3>
+        <div class="qa-list">
+          <label class="qa-row">
+            <input
+              type="checkbox"
+              :checked="settings.autoCreateQuadrantHeaders"
+              @change="(e: Event) => settings.setAutoCreateQuadrantHeaders((e.target as HTMLInputElement).checked)"
+            />
+            <div class="qa-label" style="display:flex;flex-direction:column;gap:2px;">
+              <span>{{ t('settings.auto_create_quadrant_headers') }}</span>
+              <small class="muted" style="font-size:0.72rem;">{{ t('settings.auto_create_quadrant_headers_help') }}</small>
+            </div>
+          </label>
+        </div>
+      </section>
+
       <!-- Quick actions -->
       <section class="section">
         <h3>{{ t('settings.sections.quickActions') }}</h3>

@@ -114,6 +114,7 @@ export default {
     about: {
       tagline: 'A floating, file-first todo aggregator.',
     },
+    behavior: 'Behavior',
     auto_create_quadrant_headers: 'Auto-create quadrant headers',
     auto_create_quadrant_headers_help:
       'When you add a task to a quadrant whose header is missing, create the header automatically.',

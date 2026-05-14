@@ -114,6 +114,7 @@ export default {
     about: {
       tagline: '一款浮窗式、文件优先的待办聚合器。',
     },
+    behavior: '行为',
     auto_create_quadrant_headers: '自动创建象限标题',
     auto_create_quadrant_headers_help:
       '向一个不存在的象限添加任务时，自动追加 `## 🔴 紧急+重要` 等标题。',

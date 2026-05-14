@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
 import TaskItem from './TaskItem.vue';
 
 const props = defineProps<{ source: Source; tasks: Task[] }>();
+const { t } = useI18n();
 const settings = useSettingsStore();
 
 const collapsed = ref(false);
@@ -64,7 +66,7 @@ async function setDefault() {
 }
 
 async function removeSource() {
-  if (!confirm(`Remove source "${displayLabel.value}"?\nThis only forgets it in Floaty Todo — the files are untouched.`)) return;
+  if (!confirm(t('source.removeConfirm', { label: displayLabel.value }))) return;
   try { await settings.removeSource(props.source.id); }
   catch (e: any) { actionError.value = String(e); }
 }
@@ -82,49 +84,49 @@ async function openTerminal() {
 <template>
   <section class="group" :class="{ collapsed }">
     <header class="group-head">
-      <button class="caret" @click="collapsed = !collapsed" :title="collapsed ? 'Expand' : 'Collapse'">
+      <button class="caret" @click="collapsed = !collapsed" :title="collapsed ? t('source.expand') : t('source.collapse')">
         {{ collapsed ? '▸' : '▾' }}
       </button>
       <span class="kind-icon">{{ source.kind === 'folder' ? '📁' : '📄' }}</span>
       <span class="label" :title="source.path">{{ displayLabel }}</span>
-      <span v-if="isDefault" class="badge" title="QuickAdd default target">default</span>
+      <span v-if="isDefault" class="badge" :title="t('source.defaultBadge')">{{ t('source.defaultBadge') }}</span>
       <span class="counts">
         {{ counts.todo }}<span v-if="counts.done"> · {{ counts.done }}✓</span>
       </span>
       <div class="actions">
-        <button class="icon-btn" @click="openVscode" title="Open in VS Code">⎘</button>
-        <button class="icon-btn" @click="openTerminal" title="Open terminal here">▷</button>
-        <button class="icon-btn" :class="{ active: editing }" @click="editing ? cancelEdit() : startEdit()" title="Edit source">⋯</button>
+        <button class="icon-btn" @click="openVscode" :title="t('source.openVscode')">⎘</button>
+        <button class="icon-btn" @click="openTerminal" :title="t('source.openTerminal')">▷</button>
+        <button class="icon-btn" :class="{ active: editing }" @click="editing ? cancelEdit() : startEdit()" :title="t('source.edit')">⋯</button>
       </div>
     </header>
 
     <div v-if="editing" class="editor">
       <label>
-        Label
+        {{ t('source.fields.label') }}
         <input v-model="labelDraft" :placeholder="displayLabel" />
       </label>
       <label>
-        Project root <span class="hint">(for VS Code / terminal)</span>
+        {{ t('source.fields.projectRoot') }} <span class="hint">{{ t('source.fields.projectRootHint') }}</span>
         <span class="root-row">
           <input v-model="rootDraft" :placeholder="source.path" />
-          <button type="button" @click="pickRoot" title="Pick folder…">📁</button>
+          <button type="button" @click="pickRoot" :title="t('source.actions.pickFolder')">📁</button>
         </span>
       </label>
       <div class="editor-actions">
         <button type="button" class="ghost" :disabled="isDefault" @click="setDefault">
-          {{ isDefault ? '✓ Default' : 'Set as default' }}
+          {{ isDefault ? t('source.actions.isDefault') : t('source.actions.setDefault') }}
         </button>
-        <button type="button" class="danger" @click="removeSource">Remove</button>
+        <button type="button" class="danger" @click="removeSource">{{ t('source.actions.remove') }}</button>
         <span class="spacer"></span>
-        <button type="button" class="ghost" @click="cancelEdit">Cancel</button>
-        <button type="button" class="primary" @click="saveEdit">Save</button>
+        <button type="button" class="ghost" @click="cancelEdit">{{ t('source.actions.cancel') }}</button>
+        <button type="button" class="primary" @click="saveEdit">{{ t('source.actions.save') }}</button>
       </div>
       <p v-if="actionError" class="error">{{ actionError }}</p>
     </div>
 
     <div v-if="!collapsed" class="rows">
-      <TaskItem v-for="t in tasks" :key="t.id" :task="t" />
-      <div v-if="tasks.length === 0 && !editing" class="empty-source">No tasks in this source.</div>
+      <TaskItem v-for="tk in tasks" :key="tk.id" :task="tk" />
+      <div v-if="tasks.length === 0 && !editing" class="empty-source">{{ t('source.noTasks') }}</div>
     </div>
   </section>
 </template>

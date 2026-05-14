@@ -1,0 +1,81 @@
+export default {
+  app: {
+    name: 'Floaty Todo',
+  },
+  empty: {
+    title: 'Floaty Todo',
+    blurb: 'Add your first todo source.\nA folder (recursive) or a single {ext} file.',
+    addFolder: '📁 Folder…',
+    addFile: '📄 File…',
+  },
+  tasks: {
+    loading: 'Loading…',
+    addPlaceholder: 'Add to {target}…',
+    targetDefault: 'default ({label})',
+    todoCount: '{n} todo',
+    doneCount: '{n} done',
+    refresh: 'Refresh',
+    refreshTitle: 'Refresh (re-read all .md files)',
+    addFolderTitle: 'Add folder source',
+    addFileTitle: 'Add file source',
+  },
+  source: {
+    noTasks: 'No tasks in this source.',
+    defaultBadge: 'default',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    openVscode: 'Open in VS Code',
+    openTerminal: 'Open terminal here',
+    edit: 'Edit source',
+    fields: {
+      label: 'Label',
+      projectRoot: 'Project root',
+      projectRootHint: '(for VS Code / terminal)',
+    },
+    actions: {
+      pickFolder: 'Pick folder…',
+      setDefault: 'Set as default',
+      isDefault: '✓ Default',
+      remove: 'Remove',
+      cancel: 'Cancel',
+      save: 'Save',
+    },
+    removeConfirm: 'Remove source "{label}"?\nThis only forgets it in Floaty Todo — the files are untouched.',
+  },
+  settings: {
+    title: 'Settings',
+    back: 'Back',
+    sections: {
+      appearance: 'Appearance',
+      language: 'Language',
+      sources: 'Sources',
+      about: 'About',
+    },
+    theme: {
+      label: 'Theme',
+      system: 'System',
+      light: 'Light',
+      dark: 'Dark',
+    },
+    language: {
+      label: 'Display language',
+    },
+    sources: {
+      empty: 'No sources yet.',
+      addFolder: '+ Folder',
+      addFile: '+ File',
+      defaultBadge: 'default',
+      setDefault: 'Set default',
+      openVscode: 'Open in VS Code',
+      openTerminal: 'Open terminal',
+      edit: 'Edit label / project root',
+      remove: 'Remove source',
+    },
+    about: {
+      tagline: 'A floating, file-first todo aggregator.',
+    },
+  },
+  errors: {
+    pickFailed: 'Could not pick that path.',
+  },
+};

@@ -1,5 +1,37 @@
 # 变更日志
 
+## 2026-05-14 dedicated Settings page (theme / language / sources) + i18n (en/zh)
+
+Centralised settings page replaces the floating theme button. The bottom-left
+⚙ button in TaskList (and the corner button in EmptyState) opens a full-screen
+Settings view where the user manages theme, display language, and the source
+list (with prominent per-row delete). All UI strings now route through vue-i18n
+so 中文 and English both ship in the binary.
+
+- `package.json`: + `vue-i18n@^11`
+- `src/i18n/index.ts` (new): `createI18n` with composition API; auto-detects
+  initial locale from `localStorage['floaty.locale']` → `navigator.language`
+  → `'en'`; exported `setLocale(locale)` persists choice and updates
+  `document.documentElement.lang`
+- `src/i18n/locales/en.ts` and `src/i18n/locales/zh.ts`: every UI string
+  (empty / tasks / source / settings / errors)
+- `src/main.ts`: `app.use(i18n)`
+- `src/views/SettingsView.vue` (new): four sections — Appearance (theme
+  segmented control), Language (locale select), Sources (toolbar + card list
+  with ⎘ / ▷ / 📝 / 🗑 per row, inline editor for label / project_root /
+  set-default), About; back button returns to task view
+- `src/App.vue`: introduces `view: 'tasks' | 'settings'` state; mounts
+  `useTheme()` at the root so the system-pref watcher lives for the whole
+  app; removes the floating theme button; tray "Manage sources…" event now
+  opens the Settings view
+- `src/components/TaskList.vue`: bottom-left ⚙ settings button (replaces the
+  inline 📁+/📄+ chips — adding new sources now lives in Settings); emits
+  `openSettings`; all strings via `t()`
+- `src/components/EmptyState.vue`: bottom-left corner ⚙ button so a user
+  with no sources can still reach Language / Theme; strings via `t()`
+- `src/components/SourceGroup.vue`: strings via `t()` (in-card edit panel
+  kept for fast access while browsing tasks)
+
 ## 2026-05-14 source-grouped UI with per-source actions and inline editor
 
 Tasks now render grouped by source instead of one flat list, with each

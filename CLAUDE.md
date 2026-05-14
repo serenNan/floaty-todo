@@ -2,7 +2,7 @@
 
 ## Tech Stack
 
-- **Frontend:** Vue 3 + TypeScript, Vite 6, Pinia
+- **Frontend:** Vue 3 + TypeScript, Vite 6, Pinia, vue-i18n (en/zh)
 - **Backend:** Tauri 2 (Rust), `tauri-plugin-dialog` (file picker)
 - **Package manager:** npm
 - **Identifier:** `com.serendipity.floaty-todo`
@@ -59,11 +59,13 @@ Tasks reference their source via `Task.source_id`. The registry keys files by `(
 | `src/services/tauri-api.ts` | `api` object — wraps `invoke` commands + dialog pickers (`pickFolder` / `pickMarkdownFile`) + event listeners (`tasks-updated`, `sources-changed`, `request-manage-sources`) |
 | `src/stores/tasks.ts` | `useTaskStore` — `tasks` / `sortedTasks` / `loading` / `error`; `refresh` / `silentRefresh` / `toggle` / `add(text, sourceId?)` |
 | `src/stores/settings.ts` | `useSettingsStore` — `config` / `sources` / `hasSources` / `defaultSourceId`; `addSource` / `removeSource` / `updateSource` / `setDefaultSource` / `pickAndAddFolder` / `pickAndAddFile` |
-| `src/main.ts` | App entry — wires `createPinia()` then mounts `App` |
+| `src/main.ts` | App entry — wires `createPinia()` + i18n then mounts `App` |
+| `src/i18n/` | `vue-i18n` setup + `locales/en.ts` / `locales/zh.ts`; `setLocale()` persists to localStorage `floaty.locale` and syncs `<html lang>` |
 | `src/composables/useTheme.ts` | Theme composable — `currentTheme` / `effectiveTheme` / `setTheme`; localStorage `floaty.theme`, system media query listener |
+| `src/views/SettingsView.vue` | Full-screen settings page — Appearance (theme segmented), Language (locale select), Sources (cards with ⎘ / ▷ / 📝 / 🗑 + inline editor), About; emits `back` |
 | `src/components/SourceGroup.vue` | Collapsible per-source group: header (caret + kind icon + label + default badge + counts) + action chips (⎘ VS Code / ▷ terminal / ⋯ edit) + inline editor (label / project_root / set-default / remove) + task rows |
-| `src/components/TaskList.vue` | Grouped task view (renders `SourceGroup` per source in config order); QuickAdd input + per-task source dropdown; footer totals + `📁+`/`📄+`/`↻` chips |
-| `src/components/TitleBar.vue` | Custom 32px title bar — drag region, theme cycle (☀/🌙/🖥), minimize, hide-to-tray close |
+| `src/components/TaskList.vue` | Grouped task view (renders `SourceGroup` per source in config order); QuickAdd input + per-task source dropdown; footer with bottom-left ⚙ Settings + totals + ↻ refresh |
+| `src/components/EmptyState.vue` | First-run landing: 📁 Folder / 📄 File picker buttons + bottom-left ⚙ Settings corner button |
 
 ## Build Commands
 

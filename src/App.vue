@@ -1,28 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useSettingsStore } from './stores/settings';
 import { useTaskStore } from './stores/tasks';
 import { useTheme } from './composables/useTheme';
 import { api } from './services/tauri-api';
 import EmptyState from './components/EmptyState.vue';
 import TaskList from './components/TaskList.vue';
+import SettingsView from './views/SettingsView.vue';
+
+type View = 'tasks' | 'settings';
 
 const settings = useSettingsStore();
 const tasks = useTaskStore();
-const { currentTheme, setTheme } = useTheme();
+// Touch useTheme so its system-pref listener mounts at the App root.
+useTheme();
 const hasSources = computed(() => settings.hasSources);
-
-const themeIcon = computed(() =>
-  currentTheme.value === 'light' ? '☀' :
-  currentTheme.value === 'dark' ? '🌙' : '🖥'
-);
-const themeButtonTitle = computed(() => `Theme: ${currentTheme.value} (click to cycle)`);
-
-function cycleTheme() {
-  const next = currentTheme.value === 'system' ? 'light'
-    : currentTheme.value === 'light' ? 'dark' : 'system';
-  setTheme(next);
-}
+const view = ref<View>('tasks');
 
 const unlisteners: Array<() => void> = [];
 
@@ -34,28 +27,38 @@ onMounted(async () => {
     await settings.load();
     await tasks.silentRefresh();
   }));
-  unlisteners.push(await api.onManageSourcesRequested(async () => {
-    // TODO(v0.2 UI): open source manager panel. For now, just refresh.
-    await settings.load();
+  unlisteners.push(await api.onManageSourcesRequested(() => {
+    view.value = 'settings';
   }));
 });
 
 onUnmounted(() => { unlisteners.forEach(u => u()); });
+
+function openSettings() { view.value = 'settings'; }
+function backToTasks() { view.value = 'tasks'; }
 </script>
 
 <template>
   <main>
     <div class="content">
       <Transition name="fade" mode="out-in">
-        <EmptyState v-if="!hasSources" key="empty" />
-        <TaskList v-else key="list" />
+        <SettingsView
+          v-if="view === 'settings'"
+          key="settings"
+          @back="backToTasks"
+        />
+        <EmptyState
+          v-else-if="!hasSources"
+          key="empty"
+          @open-settings="openSettings"
+        />
+        <TaskList
+          v-else
+          key="list"
+          @open-settings="openSettings"
+        />
       </Transition>
     </div>
-    <button
-      class="theme-toggle"
-      :title="themeButtonTitle"
-      @click="cycleTheme"
-    >{{ themeIcon }}</button>
   </main>
 </template>
 
@@ -64,6 +67,9 @@ onUnmounted(() => { unlisteners.forEach(u => u()); });
 
 main {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
 .content {
@@ -74,20 +80,11 @@ main {
   min-height: 0;
 }
 
-.theme-toggle {
-  position: absolute;
-  bottom: 0.4rem;
-  right: 0.5rem;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  font-size: 0.95rem;
-  line-height: 1;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  opacity: 0.7;
-  z-index: 10;
+/* Fade transition for view switches */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 140ms ease-out;
 }
-.theme-toggle:hover { opacity: 1; background: var(--surface-strong); }
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
 </style>

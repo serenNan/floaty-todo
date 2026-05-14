@@ -1,0 +1,81 @@
+export default {
+  app: {
+    name: 'Floaty Todo',
+  },
+  empty: {
+    title: 'Floaty Todo',
+    blurb: '添加第一个任务源。\n可以是一个文件夹（递归扫描）或单个 {ext} 文件。',
+    addFolder: '📁 文件夹…',
+    addFile: '📄 文件…',
+  },
+  tasks: {
+    loading: '加载中…',
+    addPlaceholder: '添加到 {target}…',
+    targetDefault: '默认（{label}）',
+    todoCount: '{n} 待办',
+    doneCount: '{n} 已完成',
+    refresh: '刷新',
+    refreshTitle: '刷新（重新读取所有 .md 文件）',
+    addFolderTitle: '添加文件夹源',
+    addFileTitle: '添加文件源',
+  },
+  source: {
+    noTasks: '此源下暂无任务。',
+    defaultBadge: '默认',
+    expand: '展开',
+    collapse: '折叠',
+    openVscode: '用 VS Code 打开',
+    openTerminal: '在此打开终端',
+    edit: '编辑此源',
+    fields: {
+      label: '名称',
+      projectRoot: '项目根目录',
+      projectRootHint: '（用于 VS Code / 终端）',
+    },
+    actions: {
+      pickFolder: '选择文件夹…',
+      setDefault: '设为默认',
+      isDefault: '✓ 默认',
+      remove: '移除',
+      cancel: '取消',
+      save: '保存',
+    },
+    removeConfirm: '确定要移除源 "{label}" 吗？\n此操作只在 Floaty Todo 内部忘记它——不会改动任何文件。',
+  },
+  settings: {
+    title: '设置',
+    back: '返回',
+    sections: {
+      appearance: '外观',
+      language: '语言',
+      sources: '任务源',
+      about: '关于',
+    },
+    theme: {
+      label: '主题',
+      system: '跟随系统',
+      light: '浅色',
+      dark: '深色',
+    },
+    language: {
+      label: '显示语言',
+    },
+    sources: {
+      empty: '还没有任何任务源。',
+      addFolder: '+ 文件夹',
+      addFile: '+ 文件',
+      defaultBadge: '默认',
+      setDefault: '设为默认',
+      openVscode: '用 VS Code 打开',
+      openTerminal: '打开终端',
+      edit: '编辑名称 / 项目根目录',
+      remove: '移除此源',
+    },
+    about: {
+      tagline: '一款浮窗式、文件优先的待办聚合器。',
+    },
+  },
+  errors: {
+    pickFailed: '无法选择该路径。',
+  },
+};

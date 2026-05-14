@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../stores/settings';
 import { useTaskStore } from '../stores/tasks';
 
+defineEmits<{ openSettings: [] }>();
+
+const { t } = useI18n();
 const settings = useSettingsStore();
 const tasks = useTaskStore();
 
@@ -19,18 +23,24 @@ async function addFile() {
 <template>
   <div class="empty-wrap">
     <div class="empty-card">
-      <h2>Floaty Todo</h2>
-      <p>Add your first todo source.<br>A folder (recursive) or a single <code>.md</code> file.</p>
+      <h2>{{ t('empty.title') }}</h2>
+      <p class="blurb">
+        <template v-for="(line, idx) in t('empty.blurb', { ext: '.md' }).split('\n')" :key="idx">
+          <span>{{ line }}</span><br v-if="idx === 0" />
+        </template>
+      </p>
       <div class="actions">
-        <button @click="addFolder">📁 Folder…</button>
-        <button @click="addFile">📄 File…</button>
+        <button @click="addFolder">{{ t('empty.addFolder') }}</button>
+        <button @click="addFile">{{ t('empty.addFile') }}</button>
       </div>
     </div>
+    <button class="settings-corner" @click="$emit('openSettings')" :title="t('settings.title')">⚙</button>
   </div>
 </template>
 
 <style scoped>
 .empty-wrap {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
@@ -57,19 +67,11 @@ async function addFile() {
   margin-bottom: 0.6rem;
 }
 
-.empty-card p {
+.empty-card .blurb {
   font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.5;
   margin-bottom: 1.2rem;
-}
-
-.empty-card code {
-  font-size: 0.8em;
-  background: var(--accent-soft);
-  padding: 1px 4px;
-  border-radius: 3px;
-  color: var(--accent);
 }
 
 .actions {
@@ -93,4 +95,22 @@ async function addFile() {
   background: var(--accent-soft);
   box-shadow: var(--card-shadow);
 }
+
+.settings-corner {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 0.6rem;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0.95rem;
+  line-height: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  opacity: 0.7;
+  cursor: pointer;
+}
+.settings-corner:hover { opacity: 1; background: var(--surface-strong); color: var(--text); }
 </style>

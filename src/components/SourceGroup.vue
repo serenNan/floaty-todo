@@ -132,6 +132,14 @@ const enabledActions = computed(() =>
 
 const isScanning = computed(() => settings.scanningSourceIds.has(props.source.id));
 const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOLD);
+
+/// Kind icon as a real emoji that flips on expand/collapse. Folder gets the
+/// open-folder glyph when expanded so the visual matches the disclosure
+/// state; file gets a pencil-and-page when expanded to imply "editable".
+const kindEmoji = computed(() => {
+  if (props.source.kind === 'folder') return collapsed.value ? '📁' : '📂';
+  return collapsed.value ? '📄' : '📝';
+});
 </script>
 
 <template>
@@ -140,9 +148,7 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
       <button class="caret" @click="collapsed = !collapsed" :title="collapsed ? t('source.expand') : t('source.collapse')">
         <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="14" />
       </button>
-      <span class="kind-icon">
-        <Icon :name="source.kind === 'folder' ? 'folder' : 'file'" :size="15" />
-      </span>
+      <span class="kind-icon" aria-hidden="true">{{ kindEmoji }}</span>
       <span class="label" :title="source.path">{{ displayLabel }}</span>
       <span v-if="isDefault" class="badge" :title="t('source.defaultBadge')">{{ t('source.defaultBadge') }}</span>
       <span v-if="isScanning" class="scanning" :title="t('source.scanning')">
@@ -254,8 +260,14 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
 .kind-icon {
   display: inline-flex;
   align-items: center;
-  color: var(--text-muted);
-  opacity: 0.9;
+  justify-content: center;
+  width: 18px;
+  font-size: 14px;
+  line-height: 1;
+  /* Pin OS colour-emoji fonts so the glyphs render as real cartoon
+     emoji rather than the monochrome fallback some webviews pick. */
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  flex-shrink: 0;
 }
 
 .label {

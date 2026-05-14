@@ -1,5 +1,19 @@
 # 变更日志
 
+## 2026-05-14 source kind icons → real emoji that flip on expand/collapse
+
+Replace the outlined folder / file SVGs on each source header with real
+colour emoji, and make folder + file glyphs reflect the disclosure state
+so the icon doubles as a visual cue.
+
+- `src/components/SourceGroup.vue`: new `kindEmoji` computed —
+  folder: 📁 collapsed / 📂 expanded, file: 📄 collapsed / 📝 expanded;
+  template renders a `<span class="kind-icon">` and CSS pins Segoe UI
+  Emoji / Apple Color Emoji / Noto Color Emoji so the glyph renders in
+  colour
+- `src/views/SettingsView.vue`: source-card `src-icon` matches the new
+  style (no expand/collapse state here, so just 📁 / 📄)
+
 ## 2026-05-14 add-row "+" now adds a source (was: add task)
 
 Visually the "+" sits right next to the source dropdown, so users

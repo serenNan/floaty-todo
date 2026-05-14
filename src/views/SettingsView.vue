@@ -282,9 +282,7 @@ async function openTerminal(s: Source) {
 
         <div v-for="s in settings.sources" :key="s.id" class="source-card">
           <div class="src-row">
-            <span class="src-icon">
-              <Icon :name="s.kind === 'folder' ? 'folder' : 'file'" :size="16" />
-            </span>
+            <span class="src-icon" aria-hidden="true">{{ s.kind === 'folder' ? '📁' : '📄' }}</span>
             <div class="src-main">
               <div class="src-label">
                 {{ displayLabel(s) }}
@@ -482,9 +480,13 @@ select {
 }
 .src-icon {
   flex-shrink: 0;
-  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 20px;
+  font-size: 15px;
+  line-height: 1;
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
 }
 .src-main { flex: 1; min-width: 0; }
 .src-label {

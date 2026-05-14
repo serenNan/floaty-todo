@@ -31,7 +31,10 @@ export default {
     collapse: '折叠',
     openVscode: '用 VS Code 打开',
     openTerminal: '在此打开终端',
+    openClaudeCode: '启动 Claude Code 会话',
     edit: '编辑此源',
+    scanning: '正在扫描…',
+    scanningHint: '正在扫描该源下的文件，请稍候。',
     fields: {
       label: '名称',
       projectRoot: '项目根目录',
@@ -53,8 +56,12 @@ export default {
     sections: {
       appearance: '外观',
       language: '语言',
+      quickActions: '快捷动作',
       sources: '任务源',
       about: '关于',
+    },
+    quickActions: {
+      hint: '显示在每个源标题栏上的按钮。不需要的关掉即可。',
     },
     theme: {
       label: '主题',

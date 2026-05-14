@@ -5,7 +5,7 @@ import type { Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import TaskItem from './TaskItem.vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   /// The source this file belongs to. Used to compute a relative path for the
   /// fallback display name (so two `todo.md` files in different folders show
   /// `sub-a/todo.md` and `sub-b/todo.md` instead of just `todo.md`).
@@ -14,12 +14,15 @@ const props = defineProps<{
   /// `AppConfig.file_labels` and `Task.source_file`).
   filePath: string;
   tasks: Task[];
-}>();
+  /// Start collapsed (set by SourceGroup when the parent source is huge so
+  /// the DOM stays responsive — only the file headers render until expanded).
+  initialCollapsed?: boolean;
+}>(), { initialCollapsed: false });
 
 const { t } = useI18n();
 const settings = useSettingsStore();
 
-const collapsed = ref(false);
+const collapsed = ref(props.initialCollapsed);
 const editing = ref(false);
 const labelDraft = ref('');
 

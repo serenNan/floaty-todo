@@ -31,6 +31,12 @@ onMounted(async () => {
   unlisteners.push(await api.onManageSourcesRequested(() => {
     view.value = 'settings';
   }));
+  unlisteners.push(await api.onSourceScanStarted(id => {
+    settings.markScanning(id, true);
+  }));
+  unlisteners.push(await api.onSourceScanFinished(id => {
+    settings.markScanning(id, false);
+  }));
 });
 
 onUnmounted(() => { unlisteners.forEach(u => u()); });

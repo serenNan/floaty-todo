@@ -34,11 +34,17 @@ pub(crate) fn spawn_source_scan_and_watcher(
     slots: WatcherSlots,
 ) {
     std::thread::spawn(move || {
+        // Tell the frontend a scan is in-flight so it can show a spinner /
+        // disable the "Add source" button until we're done. Payload is the
+        // source id — the UI only blocks the right card, not the whole app.
+        let _ = app.emit("source-scan-started", source.id.clone());
+
         {
             let mut reg = registry.write().unwrap();
             reg.rebuild_source(&source);
         }
         let _ = app.emit("tasks-updated", ());
+        let _ = app.emit("source-scan-finished", source.id.clone());
 
         let app_for_cb = app.clone();
         let registry_for_cb = registry.clone();
@@ -160,6 +166,9 @@ pub fn run() {
             commands::set_file_label,
             commands::open_in_vscode,
             commands::open_in_terminal,
+            commands::open_in_claude_code,
+            commands::run_quick_action,
+            commands::set_enabled_quick_actions,
             commands::open_url,
             commands::show_window,
             commands::hide_window,

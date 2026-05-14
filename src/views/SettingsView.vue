@@ -6,7 +6,7 @@ import { useTheme } from '../composables/useTheme';
 import { setLocale, SUPPORTED_LOCALES, type Locale } from '../i18n';
 import { api } from '../services/tauri-api';
 import { confirm } from '../composables/useConfirm';
-import type { Source } from '../types/task';
+import type { QuickActionKind, Source } from '../types/task';
 
 defineEmits<{ back: [] }>();
 
@@ -29,6 +29,28 @@ const languages: Array<{ value: Locale; label: string }> = [
   { value: 'en', label: 'English' },
   { value: 'zh', label: '中文' },
 ];
+
+/// All known quick-action kinds; the user picks which to enable. The
+/// stored order is the display order on each source header — toggling
+/// off + on re-appends, which is the cheapest way to control ordering
+/// without a separate drag-and-drop reorder UI.
+const ALL_QUICK_ACTIONS: Array<{ kind: QuickActionKind; icon: string; i18nKey: string }> = [
+  { kind: 'vscode',      icon: '⎘', i18nKey: 'source.openVscode' },
+  { kind: 'terminal',    icon: '▷', i18nKey: 'source.openTerminal' },
+  { kind: 'claude_code', icon: '◆', i18nKey: 'source.openClaudeCode' },
+];
+
+function isActionEnabled(kind: QuickActionKind) {
+  return settings.enabledQuickActions.includes(kind);
+}
+
+async function toggleAction(kind: QuickActionKind) {
+  const current = settings.enabledQuickActions;
+  const next = isActionEnabled(kind)
+    ? current.filter(k => k !== kind)
+    : [...current, kind];
+  await settings.setEnabledQuickActions(next);
+}
 
 const defaultId = computed(() => settings.defaultSourceId);
 
@@ -154,6 +176,27 @@ async function openTerminal(s: Source) {
           <select :value="locale" @change="pickLocale">
             <option v-for="l in languages" :key="l.value" :value="l.value">{{ l.label }}</option>
           </select>
+        </div>
+      </section>
+
+      <!-- Quick actions -->
+      <section class="section">
+        <h3>{{ t('settings.sections.quickActions') }}</h3>
+        <p class="muted hint">{{ t('settings.quickActions.hint') }}</p>
+        <div class="qa-list">
+          <label
+            v-for="a in ALL_QUICK_ACTIONS"
+            :key="a.kind"
+            class="qa-row"
+          >
+            <input
+              type="checkbox"
+              :checked="isActionEnabled(a.kind)"
+              @change="toggleAction(a.kind)"
+            />
+            <span class="qa-icon">{{ a.icon }}</span>
+            <span class="qa-label">{{ t(a.i18nKey) }}</span>
+          </label>
         </div>
       </section>
 
@@ -469,4 +512,36 @@ select {
 
 .muted { color: var(--text-muted); font-size: 0.82rem; margin: 0.2rem 0 0; }
 .error { color: #ef4444; font-size: 0.78rem; margin: 0.4rem 0 0; }
+
+.hint { margin-bottom: 0.5rem; font-size: 0.76rem; }
+
+.qa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.qa-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+.qa-row:hover { background: var(--accent-soft); }
+.qa-row input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.qa-icon {
+  width: 18px;
+  text-align: center;
+  color: var(--accent);
+}
+.qa-label { flex: 1; }
 </style>

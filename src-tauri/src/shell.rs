@@ -47,6 +47,63 @@ pub fn open_vscode(path: &Path) -> Result<()> {
     })
 }
 
+/// Open a fresh Claude Code session at `path`. The CLI is npm-installed so on
+/// Windows it lives as `claude.cmd`; on other platforms it's a plain `claude`
+/// shell shim. Spawned inside a terminal because the CLI is interactive — a
+/// bare `Command::new("claude")` would attach to our nulled stdio and exit.
+pub fn open_claude_code(path: &Path) -> Result<()> {
+    let p = path.to_string_lossy().into_owned();
+    if cfg!(windows) {
+        // Try Windows Terminal first so Claude lands in a real PTY.
+        let mut wt = Command::new("wt.exe");
+        wt.args(["-d", &p, "--", "cmd.exe", "/k", "claude.cmd"]);
+        if spawn_detached(&mut wt).is_ok() {
+            return Ok(());
+        }
+        // Fallback: open Windows Terminal without the launcher (user runs `claude` manually).
+        let mut wt2 = Command::new("wt.exe");
+        wt2.args(["-d", &p]);
+        if spawn_detached(&mut wt2).is_ok() {
+            return Ok(());
+        }
+        // Last resort: cmd.exe in a new window.
+        let mut cmd = Command::new("cmd.exe");
+        cmd.args(["/c", "start", "cmd", "/k", "claude.cmd"]).current_dir(path);
+        spawn_detached(&mut cmd)
+            .map_err(|_| AppError::CommandFailed(
+                "could not launch Claude Code (need claude CLI on PATH and either wt or cmd)".into(),
+            ))
+    } else if cfg!(target_os = "macos") {
+        // Open a new Terminal.app window and run `claude` in the chosen folder.
+        let script = format!(
+            "tell application \"Terminal\" to do script \"cd '{}' && claude\"",
+            p.replace('\'', "'\\''")
+        );
+        let mut osa = Command::new("osascript");
+        osa.args(["-e", &script]);
+        spawn_detached(&mut osa)
+            .map_err(|_| AppError::CommandFailed("could not launch Claude Code via Terminal.app".into()))
+    } else {
+        // Linux: spawn the most likely emulator with `claude` as the entry command.
+        for (label, bin, args) in [
+            ("x-terminal-emulator", "x-terminal-emulator", vec!["-e", "claude"]),
+            ("gnome-terminal", "gnome-terminal", vec!["--", "claude"]),
+            ("konsole", "konsole", vec!["-e", "claude"]),
+            ("xterm", "xterm", vec!["-e", "claude"]),
+        ] {
+            let mut c = Command::new(bin);
+            c.args(&args).current_dir(path);
+            if spawn_detached(&mut c).is_ok() {
+                return Ok(());
+            }
+            let _ = label;
+        }
+        Err(AppError::CommandFailed(
+            "could not launch Claude Code (no terminal emulator available)".into(),
+        ))
+    }
+}
+
 /// Open a terminal at `path`, trying platform-specific options in order.
 pub fn open_terminal(path: &Path) -> Result<()> {
     let attempts = build_terminal_attempts(path);

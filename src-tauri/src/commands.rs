@@ -2,7 +2,7 @@ use crate::config;
 use crate::error::{AppError, Result};
 use crate::registry::TaskRegistry;
 use crate::storage;
-use crate::types::{file_label_key, AppConfig, Source, SourceKind, Task};
+use crate::types::{file_label_key, AppConfig, QuickActionKind, Source, SourceKind, Task};
 use crate::watcher::IgnoreHashes;
 use crate::{spawn_source_scan_and_watcher, WatcherSlots};
 use std::path::PathBuf;
@@ -288,6 +288,49 @@ pub fn open_in_terminal(state: State<'_, AppState>, source_id: String) -> Result
     let source = find_source_by_id(&state, &source_id)?;
     let target = source.effective_project_root();
     crate::shell::open_terminal(&target)
+}
+
+/// Open a fresh Claude Code session at the source's effective project root.
+#[tauri::command]
+pub fn open_in_claude_code(state: State<'_, AppState>, source_id: String) -> Result<()> {
+    let source = find_source_by_id(&state, &source_id)?;
+    let target = source.effective_project_root();
+    crate::shell::open_claude_code(&target)
+}
+
+/// Dynamic dispatch — front-end picks a `QuickActionKind` and the backend
+/// routes to the matching launcher. Lets us add new kinds without breaking
+/// the IPC surface.
+#[tauri::command]
+pub fn run_quick_action(
+    state: State<'_, AppState>,
+    source_id: String,
+    kind: QuickActionKind,
+) -> Result<()> {
+    let source = find_source_by_id(&state, &source_id)?;
+    let target = source.effective_project_root();
+    match kind {
+        QuickActionKind::Vscode => crate::shell::open_vscode(&target),
+        QuickActionKind::Terminal => crate::shell::open_terminal(&target),
+        QuickActionKind::ClaudeCode => crate::shell::open_claude_code(&target),
+    }
+}
+
+/// Replace the list of quick actions shown on every source header.
+/// Order in the vec is preserved — that's the display order.
+#[tauri::command]
+pub fn set_enabled_quick_actions(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    actions: Vec<QuickActionKind>,
+) -> Result<()> {
+    {
+        let mut cfg = state.config.write().unwrap();
+        cfg.enabled_quick_actions = actions;
+        config::save_to(&state.config_path, &cfg)?;
+    }
+    let _ = app.emit("sources-changed", ());
+    Ok(())
 }
 
 /// Open an arbitrary URL with the OS default handler. Used by inline-markdown

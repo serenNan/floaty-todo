@@ -21,6 +21,23 @@ pub enum SourceKind {
     File,
 }
 
+/// One of the built-in quick-action launchers shown on a source's header.
+/// Future custom actions can be added without churning the enum by introducing
+/// a `Custom { command, args }` variant.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum QuickActionKind {
+    Vscode,
+    Terminal,
+    ClaudeCode,
+}
+
+/// Defaults shipped to brand-new users — VS Code + terminal, no Claude Code.
+/// User toggles them in Settings → Quick actions.
+pub fn default_quick_actions() -> Vec<QuickActionKind> {
+    vec![QuickActionKind::Vscode, QuickActionKind::Terminal]
+}
+
 /// A user-configured task source — either a folder (recursive `.md` scan)
 /// or a single `.md` file.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -82,6 +99,10 @@ pub struct AppConfig {
     /// different sub-folders can be told apart at a glance.
     #[serde(default)]
     pub file_labels: HashMap<String, String>,
+    /// Which quick-action buttons to render on each source header, in order.
+    /// Empty = no action buttons. Persisted so the user only configures once.
+    #[serde(default = "default_quick_actions")]
+    pub enabled_quick_actions: Vec<QuickActionKind>,
 }
 
 impl Default for AppConfig {
@@ -92,6 +113,7 @@ impl Default for AppConfig {
             inbox_file: "inbox.md".into(),
             always_on_top: true,
             file_labels: HashMap::new(),
+            enabled_quick_actions: default_quick_actions(),
         }
     }
 }

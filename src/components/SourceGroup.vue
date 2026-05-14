@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { Source, Task } from '../types/task';
+import type { QuickActionKind, Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
 import { confirm } from '../composables/useConfirm';
 import FileGroup from './FileGroup.vue';
+import TaskItem from './TaskItem.vue';
+
+/// Auto-collapse every FileGroup the first time we render a source whose
+/// task count exceeds this threshold. Keeps the DOM tree small enough to
+/// stay responsive on huge vaults (thousands of tasks → only a few dozen
+/// file headers in the DOM until the user expands one).
+const BIG_SOURCE_TASK_THRESHOLD = 50;
 
 const props = defineProps<{ source: Source; tasks: Task[] }>();
 const { t } = useI18n();
@@ -100,14 +107,30 @@ async function removeSource() {
   catch (e: any) { actionError.value = String(e); }
 }
 
-async function openVscode() {
-  try { await api.openInVscode(props.source.id); }
+async function runAction(kind: QuickActionKind) {
+  try { await api.runQuickAction(props.source.id, kind); }
   catch (e: any) { actionError.value = String(e); }
 }
-async function openTerminal() {
-  try { await api.openInTerminal(props.source.id); }
-  catch (e: any) { actionError.value = String(e); }
+
+interface ActionMeta {
+  kind: QuickActionKind;
+  icon: string;
+  i18n: string;
 }
+const ACTION_META: Record<QuickActionKind, ActionMeta> = {
+  vscode:      { kind: 'vscode',      icon: '⎘', i18n: 'source.openVscode' },
+  terminal:    { kind: 'terminal',    icon: '▷', i18n: 'source.openTerminal' },
+  claude_code: { kind: 'claude_code', icon: '◆', i18n: 'source.openClaudeCode' },
+};
+
+const enabledActions = computed(() =>
+  settings.enabledQuickActions
+    .map(k => ACTION_META[k])
+    .filter(Boolean),
+);
+
+const isScanning = computed(() => settings.scanningSourceIds.has(props.source.id));
+const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOLD);
 </script>
 
 <template>
@@ -119,12 +142,18 @@ async function openTerminal() {
       <span class="kind-icon">{{ source.kind === 'folder' ? '📁' : '📄' }}</span>
       <span class="label" :title="source.path">{{ displayLabel }}</span>
       <span v-if="isDefault" class="badge" :title="t('source.defaultBadge')">{{ t('source.defaultBadge') }}</span>
+      <span v-if="isScanning" class="scanning" :title="t('source.scanning')">⟳</span>
       <span class="counts">
         {{ counts.todo }}<span v-if="counts.done"> · {{ counts.done }}✓</span>
       </span>
       <div class="actions">
-        <button class="icon-btn" @click="openVscode" :title="t('source.openVscode')">⎘</button>
-        <button class="icon-btn" @click="openTerminal" :title="t('source.openTerminal')">▷</button>
+        <button
+          v-for="a in enabledActions"
+          :key="a.kind"
+          class="icon-btn"
+          @click="runAction(a.kind)"
+          :title="t(a.i18n)"
+        >{{ a.icon }}</button>
         <button class="icon-btn" :class="{ active: editing }" @click="editing ? cancelEdit() : startEdit()" :title="t('source.edit')">⋯</button>
       </div>
     </header>
@@ -154,14 +183,28 @@ async function openTerminal() {
     </div>
 
     <div v-if="!collapsed" class="rows">
-      <FileGroup
-        v-for="g in fileGroups"
-        :key="g.filePath"
-        :source="source"
-        :file-path="g.filePath"
-        :tasks="g.tasks"
-      />
-      <div v-if="fileGroups.length === 0 && !editing" class="empty-source">{{ t('source.noTasks') }}</div>
+      <div v-if="isScanning" class="scanning-row">{{ t('source.scanningHint') }}</div>
+
+      <!-- File source: render tasks directly. The source header *is* the
+           file header; an extra FileGroup wrapper would just nest the same
+           label twice. -->
+      <template v-if="source.kind === 'file'">
+        <TaskItem v-for="tk in tasks" :key="tk.id" :task="tk" />
+        <div v-if="tasks.length === 0 && !editing && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
+      </template>
+
+      <!-- Folder source: one FileGroup per .md file. -->
+      <template v-else>
+        <FileGroup
+          v-for="g in fileGroups"
+          :key="g.filePath"
+          :source="source"
+          :file-path="g.filePath"
+          :tasks="g.tasks"
+          :initial-collapsed="isBigSource"
+        />
+        <div v-if="fileGroups.length === 0 && !editing && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
+      </template>
     </div>
   </section>
 </template>
@@ -212,6 +255,24 @@ async function openTerminal() {
   color: var(--accent);
   border-radius: 3px;
   flex-shrink: 0;
+}
+
+.scanning {
+  font-size: 0.85rem;
+  color: var(--accent);
+  flex-shrink: 0;
+  animation: spin 1.1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.scanning-row {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .counts {

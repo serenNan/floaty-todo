@@ -1,5 +1,69 @@
 # 变更日志
 
+## 2026-05-14 configurable quick actions (+ Claude Code) + responsive scan UX
+
+Two related polish items:
+
+1. **Quick-action buttons on each source header are now user-configurable.**
+   The built-in set is VS Code / Terminal / Claude Code; the user toggles
+   which appear in Settings → Quick actions. Order in the saved list is
+   the display order on every source.
+2. **Adding a big folder source no longer freezes the UI.** Scan runs in
+   a background thread (already true) and now emits `source-scan-started` /
+   `source-scan-finished` events; the matching source shows a spinning ⟳
+   badge in its header and a "scanning…" line in its body, and FileGroups
+   inside any source with > 50 tasks render collapsed by default so the
+   DOM stays tiny until the user expands a file. Single-file sources also
+   stopped nesting a redundant FileGroup wrapper — the source header *is*
+   the file header.
+
+### Backend
+- `types.rs`: new `QuickActionKind` enum (`Vscode` / `Terminal` /
+  `ClaudeCode`); `AppConfig` gains `enabled_quick_actions: Vec<…>` with
+  `default_quick_actions()` (VS Code + Terminal) used by `#[serde(default …)]`
+- `shell.rs`: new `open_claude_code(path)` — Windows cascade
+  `wt.exe -d <p> -- cmd /k claude.cmd` → bare `wt.exe -d <p>` → `cmd /c start cmd /k claude.cmd`;
+  macOS via `osascript` → Terminal.app; Linux via the same terminal
+  emulator cascade as `open_terminal` with `-e claude`
+- `commands.rs`: `open_in_claude_code(source_id)`,
+  `run_quick_action(source_id, kind)` (dynamic dispatch on
+  `QuickActionKind`), `set_enabled_quick_actions(actions)`; all three
+  wired into `invoke_handler!`
+- `lib.rs::spawn_source_scan_and_watcher`: emits `source-scan-started`
+  before the `rebuild_source` call and `source-scan-finished` after,
+  payload = source id
+- `config.rs`: legacy `load_strips_verbatim_prefix_and_remaps_default_id`
+  test updated for the new `enabled_quick_actions` field
+- 38 unit tests pass
+
+### Frontend
+- `types/task.ts`: `QuickActionKind = 'vscode' | 'terminal' | 'claude_code'`;
+  `AppConfig.enabled_quick_actions: QuickActionKind[]`
+- `services/tauri-api.ts`: `openInClaudeCode`, `runQuickAction`,
+  `setEnabledQuickActions`, `onSourceScanStarted` / `onSourceScanFinished`
+- `stores/settings.ts`: `enabledQuickActions` computed,
+  `scanningSourceIds: ref<Set<string>>`, `isScanning` computed,
+  `markScanning(id, on)` helper, `setEnabledQuickActions`; `addSource`
+  marks scanning immediately to defeat event race
+- `App.vue`: subscribes to scan-started / scan-finished and forwards to
+  `settings.markScanning`
+- `components/SourceGroup.vue`:
+  - renders one icon button per entry in `settings.enabledQuickActions`,
+    dispatched through `api.runQuickAction`
+  - shows spinning ⟳ + "Scanning files…" while scan is in flight
+  - `BIG_SOURCE_TASK_THRESHOLD = 50` — sets `initial-collapsed` on every
+    FileGroup so big sources don't render thousands of TaskItem DOM
+    nodes on first paint
+  - File-kind sources skip the FileGroup wrapper and render TaskItems
+    directly (was nesting a single redundant group)
+- `components/FileGroup.vue`: new `initial-collapsed` prop, defaults
+  false; consumed by SourceGroup for the big-source optimisation
+- `views/SettingsView.vue`: new "Quick actions" section — one checkbox
+  row per kind; toggling rewrites `enabled_quick_actions`
+- `i18n/locales/{en,zh}.ts`: `source.openClaudeCode`, `scanning`,
+  `scanningHint`, `settings.sections.quickActions`,
+  `settings.quickActions.hint`
+
 ## 2026-05-14 inline markdown rendering + in-app confirm + smarter default labels
 
 Three small UX polish items reported together:

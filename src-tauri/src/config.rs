@@ -124,6 +124,7 @@ mod tests {
             inbox_file: "inbox.md".into(),
             always_on_top: true,
             file_labels: HashMap::new(),
+            enabled_quick_actions: crate::types::default_quick_actions(),
         };
         save_to(&p, &cfg).unwrap();
 

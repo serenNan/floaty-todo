@@ -31,7 +31,10 @@ export default {
     collapse: 'Collapse',
     openVscode: 'Open in VS Code',
     openTerminal: 'Open terminal here',
+    openClaudeCode: 'Open Claude Code session',
     edit: 'Edit source',
+    scanning: 'Scanning source…',
+    scanningHint: 'Scanning files in this source — please wait.',
     fields: {
       label: 'Label',
       projectRoot: 'Project root',
@@ -53,8 +56,12 @@ export default {
     sections: {
       appearance: 'Appearance',
       language: 'Language',
+      quickActions: 'Quick actions',
       sources: 'Sources',
       about: 'About',
+    },
+    quickActions: {
+      hint: 'Buttons shown on every source header. Toggle off the ones you don\'t want.',
     },
     theme: {
       label: 'Theme',

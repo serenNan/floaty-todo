@@ -1,5 +1,7 @@
 export type SourceKind = 'folder' | 'file';
 
+export type QuickActionKind = 'vscode' | 'terminal' | 'claude_code';
+
 export interface Source {
   id: string;
   path: string;
@@ -25,4 +27,5 @@ export interface AppConfig {
   always_on_top: boolean;
   /// Keyed by file path string (canonical, dunce-simplified on the Rust side).
   file_labels: Record<string, string>;
+  enabled_quick_actions: QuickActionKind[];
 }

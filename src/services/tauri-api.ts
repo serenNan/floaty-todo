@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
-import type { Task, AppConfig, Source, SourceKind } from '../types/task';
+import type { Task, AppConfig, Source, SourceKind, QuickActionKind } from '../types/task';
 
 export const api = {
   getTasks: () => invoke<Task[]>('get_tasks'),
@@ -42,6 +42,11 @@ export const api = {
 
   openInVscode: (sourceId: string) => invoke<void>('open_in_vscode', { sourceId }),
   openInTerminal: (sourceId: string) => invoke<void>('open_in_terminal', { sourceId }),
+  openInClaudeCode: (sourceId: string) => invoke<void>('open_in_claude_code', { sourceId }),
+  runQuickAction: (sourceId: string, kind: QuickActionKind) =>
+    invoke<void>('run_quick_action', { sourceId, kind }),
+  setEnabledQuickActions: (actions: QuickActionKind[]) =>
+    invoke<void>('set_enabled_quick_actions', { actions }),
   openUrl: (url: string) => invoke<void>('open_url', { url }),
 
   pickFolder: async (): Promise<string | null> => {
@@ -61,4 +66,8 @@ export const api = {
   onSourcesChanged: (cb: () => void): Promise<UnlistenFn> => listen('sources-changed', cb),
   onManageSourcesRequested: (cb: () => void): Promise<UnlistenFn> =>
     listen('request-manage-sources', cb),
+  onSourceScanStarted: (cb: (sourceId: string) => void): Promise<UnlistenFn> =>
+    listen<string>('source-scan-started', e => cb(e.payload)),
+  onSourceScanFinished: (cb: (sourceId: string) => void): Promise<UnlistenFn> =>
+    listen<string>('source-scan-finished', e => cb(e.payload)),
 };

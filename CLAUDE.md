@@ -41,14 +41,14 @@ Tasks reference their source via `Task.source_id`. The registry keys files by `(
 
 | Module | Role |
 |---|---|
-| `commands` | `AppState` + Tauri commands: `get_tasks`/`toggle_task`/`add_task`, source CRUD (`list_sources`/`add_source`/`remove_source`/`update_source`/`set_default_source`), per-file label override (`set_file_label`), shell actions (`open_in_vscode`/`open_in_terminal`/`open_url`), window control. `add_source` infers a default label from `project_root`'s folder name when the caller doesn't supply one |
-| `shell` | Side-effect launchers: `open_vscode(path)` (Windows `code.cmd`, else `code`), `open_terminal(path)` (Windows: wt → pwsh → powershell; macOS: `open -a Terminal`; Linux: x-terminal-emulator → gnome-terminal → konsole → xterm), `open_url(url)` (default browser via OS handler) |
+| `commands` | `AppState` + Tauri commands: `get_tasks`/`toggle_task`/`add_task`, source CRUD (`list_sources`/`add_source`/`remove_source`/`update_source`/`set_default_source`), per-file label override (`set_file_label`), quick-actions (`open_in_vscode`/`open_in_terminal`/`open_in_claude_code`/`run_quick_action`/`set_enabled_quick_actions`/`open_url`), window control. `add_source` infers a default label from `project_root`'s folder name when the caller doesn't supply one |
+| `shell` | Side-effect launchers: `open_vscode(path)`, `open_terminal(path)` (Windows: wt → pwsh → powershell; macOS: `open -a Terminal`; Linux: x-terminal-emulator → gnome-terminal → konsole → xterm), `open_claude_code(path)` (Windows: `wt -d <p> -- cmd /k claude.cmd`; macOS: Terminal.app via osascript; Linux: terminal-emulator `-e claude`), `open_url(url)` (default browser via OS handler) |
 | `registry` | `TaskRegistry` keyed by `(source_id, canonical_path)`; `rebuild_from_sources` / `rebuild_source` / `refresh_file(source, file)` |
 | `watcher` | `start_watching_source` (Folder = recursive, File = parent dir + filename filter) + `IgnoreHashes` for write-loop prevention; one `WatcherHandle` per source in `WatcherSlots: Arc<Mutex<HashMap<source_id, WatcherHandle>>>` |
 | `storage` | `toggle_task` / `append_task` — atomic writes via `tempfile::NamedTempFile` |
 | `config` | `load_from` / `save_to` / `config_file` — JSON, corrupt-tolerant |
 | `parser` | `parse_line` / `parse_file(path, source_id)` — regex, stable SHA-256 task IDs |
-| `types` | `Task` (with `source_id`), `Source` / `SourceKind` (Folder/File), `AppConfig` (`sources` Vec + `default_source_id` + `file_labels` HashMap), `ContentHash`, `file_label_key()` helper |
+| `types` | `Task` (with `source_id`), `Source` / `SourceKind` (Folder/File), `QuickActionKind` (Vscode/Terminal/ClaudeCode), `AppConfig` (`sources` + `default_source_id` + `file_labels` + `enabled_quick_actions`), `ContentHash`, `file_label_key()`, `default_quick_actions()` |
 | `error` | `AppError` (Io/Json/Watcher/NoSources/SourceNotFound/DuplicateSource/InvalidSourcePath/TaskNotFound/NotATaskLine/CommandFailed) |
 
 ## Frontend Modules
@@ -58,7 +58,7 @@ Tasks reference their source via `Task.source_id`. The registry keys files by `(
 | `src/types/task.ts` | `Task` / `Source` / `SourceKind` / `AppConfig` TS interfaces (mirror Rust) |
 | `src/services/tauri-api.ts` | `api` object — wraps `invoke` commands + dialog pickers (`pickFolder` / `pickMarkdownFile`) + event listeners (`tasks-updated`, `sources-changed`, `request-manage-sources`) |
 | `src/stores/tasks.ts` | `useTaskStore` — `tasks` / `sortedTasks` / `loading` / `error`; `refresh` / `silentRefresh` / `toggle` / `add(text, sourceId?)` |
-| `src/stores/settings.ts` | `useSettingsStore` — `config` / `sources` / `hasSources` / `defaultSourceId`; `addSource` / `removeSource` / `updateSource` / `setDefaultSource` / `pickAndAddFolder` / `pickAndAddFile` |
+| `src/stores/settings.ts` | `useSettingsStore` — `config` / `sources` / `hasSources` / `defaultSourceId` / `fileLabels` / `enabledQuickActions` / `scanningSourceIds`; CRUD via `addSource` / `removeSource` / `updateSource` / `setDefaultSource` / `setFileLabel` / `setEnabledQuickActions`; pickers `pickAndAddFolder` / `pickAndAddFile`; `markScanning(id, on)` toggle |
 | `src/main.ts` | App entry — wires `createPinia()` + i18n then mounts `App` |
 | `src/i18n/` | `vue-i18n` setup + `locales/en.ts` / `locales/zh.ts`; `setLocale()` persists to localStorage `floaty.locale` and syncs `<html lang>` |
 | `src/composables/useTheme.ts` | Theme composable — `currentTheme` / `effectiveTheme` / `setTheme`; localStorage `floaty.theme`, system media query listener |
@@ -66,7 +66,7 @@ Tasks reference their source via `Task.source_id`. The registry keys files by `(
 | `src/components/ConfirmDialog.vue` | Teleport-mounted modal driven by `useConfirm`; backdrop click / Esc cancels, focus-traps confirm button, danger variant for destructive actions |
 | `src/utils/inline-md.ts` | Zero-dep inline-only Markdown parser → `InlineSegment[]` (text / code / bold / italic / strike / link); used by `TaskItem` to render task text safely (no v-html) |
 | `src/views/SettingsView.vue` | Full-screen settings page — Appearance (theme segmented), Language (locale select), Sources (cards with ⎘ / ▷ / 📝 / 🗑 + inline editor), About; emits `back` |
-| `src/components/SourceGroup.vue` | Collapsible per-source group: header (caret + kind icon + label + default badge + counts) + action chips (⎘ VS Code / ▷ terminal / ⋯ edit) + inline editor (label / project_root / set-default / remove); tasks are bucketed by `source_file` and rendered as nested `FileGroup` children |
+| `src/components/SourceGroup.vue` | Collapsible per-source group: header (caret + kind icon + label + default badge + scan spinner + counts) + dynamic action chips driven by `enabledQuickActions` + ⋯ edit + inline editor (label / project_root / set-default / remove); folder sources bucket tasks by `source_file` and render nested `FileGroup`s (auto-collapsed when > 50 tasks); file sources render TaskItems directly (no FileGroup wrapper) |
 | `src/components/FileGroup.vue` | Per-file sub-group inside a `SourceGroup`: independently collapsible, hover-revealed ✎ rename button, inline rename input (Enter / Esc / ↺ reset); falls back to the file's relative path inside the source when no custom label is set |
 | `src/components/TaskList.vue` | Grouped task view (renders `SourceGroup` per source in config order); QuickAdd input + per-task source dropdown; footer with bottom-left ⚙ Settings + totals + ↻ refresh |
 | `src/components/EmptyState.vue` | First-run landing: 📁 Folder / 📄 File picker buttons + bottom-left ⚙ Settings corner button |

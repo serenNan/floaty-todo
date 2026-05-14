@@ -21,6 +21,8 @@ const editingId = ref<string | null>(null);
 const labelDraft = ref('');
 const rootDraft = ref('');
 const actionError = ref<string | null>(null);
+const hubError = ref<string | null>(null);
+const hubBusy = ref(false);
 
 const themes: Array<{ value: 'system' | 'light' | 'dark'; key: 'system' | 'light' | 'dark'; icon: IconName }> = [
   { value: 'system', key: 'system', icon: 'monitor' },
@@ -53,6 +55,28 @@ async function toggleAction(kind: QuickActionKind) {
     ? current.filter(k => k !== kind)
     : [...current, kind];
   await settings.setEnabledQuickActions(next);
+}
+
+async function pickHubFolder() {
+  hubError.value = null;
+  hubBusy.value = true;
+  try { await settings.pickAndSetHubFolder(); }
+  catch (e: any) { hubError.value = String(e); }
+  finally { hubBusy.value = false; }
+}
+async function clearHubFolder() {
+  hubError.value = null;
+  hubBusy.value = true;
+  try { await settings.setHubFolder(null); }
+  catch (e: any) { hubError.value = String(e); }
+  finally { hubBusy.value = false; }
+}
+async function resyncHub() {
+  hubError.value = null;
+  hubBusy.value = true;
+  try { await settings.resyncHub(); }
+  catch (e: any) { hubError.value = String(e); }
+  finally { hubBusy.value = false; }
 }
 
 const defaultId = computed(() => settings.defaultSourceId);
@@ -205,6 +229,39 @@ async function openTerminal(s: Source) {
             <span class="qa-label">{{ t(a.i18nKey) }}</span>
           </label>
         </div>
+      </section>
+
+      <!-- Hub folder -->
+      <section class="section">
+        <h3>{{ t('settings.sections.hub') }}</h3>
+        <p class="muted hint">{{ t('settings.hub.hint') }}</p>
+        <div v-if="settings.hubFolder" class="hub-set">
+          <div class="hub-path" :title="settings.hubFolder">
+            <Icon name="folder" :size="14" />
+            <span class="hub-path-text">{{ settings.hubFolder }}</span>
+          </div>
+          <div class="hub-actions">
+            <button :disabled="hubBusy" @click="resyncHub" :title="t('settings.hub.resyncTitle')">
+              <Icon name="refresh" :size="13" />
+              <span>{{ t('settings.hub.resync') }}</span>
+            </button>
+            <button :disabled="hubBusy" @click="pickHubFolder">
+              <Icon name="folder" :size="13" />
+              <span>{{ t('settings.hub.change') }}</span>
+            </button>
+            <button class="danger" :disabled="hubBusy" @click="clearHubFolder">
+              <Icon name="x" :size="13" />
+              <span>{{ t('settings.hub.disable') }}</span>
+            </button>
+          </div>
+        </div>
+        <div v-else class="hub-unset">
+          <button :disabled="hubBusy" @click="pickHubFolder">
+            <Icon name="folder" :size="14" />
+            <span>{{ t('settings.hub.choose') }}</span>
+          </button>
+        </div>
+        <p v-if="hubError" class="error">{{ hubError }}</p>
       </section>
 
       <!-- Sources -->
@@ -585,4 +642,65 @@ select {
   justify-content: center;
 }
 .qa-label { flex: 1; }
+
+.hub-set {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+}
+.hub-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text);
+  min-width: 0;
+}
+.hub-path .hub-path-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Cascadia Code', Consolas, ui-monospace, monospace;
+  font-size: 0.74rem;
+}
+.hub-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.hub-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  cursor: pointer;
+}
+.hub-actions button:hover { background: var(--accent-soft); }
+.hub-actions button:disabled { opacity: 0.5; cursor: default; }
+.hub-actions button.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); }
+.hub-actions button.danger:hover { background: rgba(239,68,68,0.1); }
+
+.hub-unset button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.8rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+.hub-unset button:hover { background: var(--accent-soft); }
+.hub-unset button:disabled { opacity: 0.5; cursor: default; }
 </style>

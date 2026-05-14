@@ -1,5 +1,53 @@
 # 变更日志
 
+## 2026-05-14 hub folder — mirror every source via hard links / junctions
+
+Adds an opt-in "hub folder" that mirrors every configured source via
+OS-level filesystem links. AI tools and shell scripts can drive every
+project's TODO from one place instead of crawling each repo. Two-way
+sync is instant because there's no copy — both ends are literally the
+same inode (file source → hard link) or the same directory (folder
+source → NTFS junction / POSIX symlink).
+
+### Backend
+- `src-tauri/src/hub.rs` (new): pure filesystem module — `mirror_path_for`
+  derives the hub-side name from the source's sanitised label,
+  `create_mirror` / `remove_mirror` / `sync_all` manage individual
+  entries and prune orphans on a full resync; cross-platform via
+  `std::fs::hard_link` for files and `cmd mklink /J` on Windows /
+  POSIX symlink elsewhere for folders
+- `types.rs`: `AppConfig` gains `hub_folder: Option<PathBuf>` with
+  `#[serde(default)]` so existing configs migrate transparently
+- `commands.rs`: new `set_hub_folder(path?)` (full resync on change)
+  and `resync_hub()` (manual repair); `add_source` / `remove_source` /
+  `update_source` now call into `hub` after their main effect via a
+  swallow-errors helper, so a junction-failure can't block source CRUD
+- `lib.rs`: registers both commands; declares `mod hub`
+- `config.rs`: test updated for the new field
+- 44 unit tests pass (added 5 hub tests: name sanitisation, mirror path
+  derivation, hard-link create + edit-through, idempotent re-create,
+  remove, orphan-pruning sync_all)
+
+### Frontend
+- `types/task.ts`: `AppConfig.hub_folder: string | null`
+- `services/tauri-api.ts`: `setHubFolder(path?)`, `resyncHub()`
+- `stores/settings.ts`: `hubFolder` computed; `setHubFolder` /
+  `resyncHub` / `pickAndSetHubFolder` helpers
+- `views/SettingsView.vue`: new "Hub folder" section between Quick
+  actions and Sources — shows the configured path with `Resync` /
+  `Change` / `Disable` buttons, or a single "Choose folder…" CTA when
+  unset; surface errors inline
+- `i18n/locales/{en,zh}.ts`: `settings.sections.hub` + `settings.hub.*`
+  strings
+
+### Trade-offs
+- Same-volume only (hard links + NTFS junctions can't cross volumes).
+  Cross-volume sources fail their mirror with an actionable message; the
+  source itself is added regardless.
+- Hub-side label collisions are an open edge case — for now whichever
+  source mirrors first wins the name; future work can disambiguate
+  with `(source_id)` suffix.
+
 ## 2026-05-14 pin icon now classic drawing-pin red, not muted
 
 The pin icon used to inherit the footer's muted text colour even when

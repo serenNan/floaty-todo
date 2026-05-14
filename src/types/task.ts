@@ -28,4 +28,7 @@ export interface AppConfig {
   /// Keyed by file path string (canonical, dunce-simplified on the Rust side).
   file_labels: Record<string, string>;
   enabled_quick_actions: QuickActionKind[];
+  /// Folder mirroring every source via OS-level filesystem links so AI
+  /// tools can find every project's TODO in one place. `null` = off.
+  hub_folder: string | null;
 }

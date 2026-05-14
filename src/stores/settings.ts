@@ -14,6 +14,7 @@ export const useSettingsStore = defineStore('settings', () => {
     () => config.value?.enabled_quick_actions ?? [],
   );
   const alwaysOnTop = computed<boolean>(() => config.value?.always_on_top ?? true);
+  const hubFolder = computed<string | null>(() => config.value?.hub_folder ?? null);
   /// Source ids currently being scanned by the backend. UI shows a spinner /
   /// disables actions for those sources. Track-by-id to avoid blocking
   /// unrelated sources when one is scanning.
@@ -89,6 +90,23 @@ export const useSettingsStore = defineStore('settings', () => {
     await setAlwaysOnTop(!alwaysOnTop.value);
   }
 
+  async function setHubFolder(path: string | null) {
+    await api.setHubFolder(path);
+    await load();
+  }
+  async function resyncHub() {
+    await api.resyncHub();
+    await load();
+  }
+  /// Open the OS folder picker and use the result as the new hub folder.
+  /// Returns the chosen path, or null if the picker was cancelled.
+  async function pickAndSetHubFolder(): Promise<string | null> {
+    const path = await api.pickFolder();
+    if (!path) return null;
+    await setHubFolder(path);
+    return path;
+  }
+
   /// Convenience: open the folder picker, then add the chosen path as a Folder source.
   async function pickAndAddFolder(): Promise<Source | null> {
     const path = await api.pickFolder();
@@ -112,6 +130,7 @@ export const useSettingsStore = defineStore('settings', () => {
     fileLabel,
     enabledQuickActions,
     alwaysOnTop,
+    hubFolder,
     scanningSourceIds,
     isScanning,
     markScanning,
@@ -124,6 +143,9 @@ export const useSettingsStore = defineStore('settings', () => {
     setEnabledQuickActions,
     setAlwaysOnTop,
     toggleAlwaysOnTop,
+    setHubFolder,
+    resyncHub,
+    pickAndSetHubFolder,
     pickAndAddFolder,
     pickAndAddFile,
   };

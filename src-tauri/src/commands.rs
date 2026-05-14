@@ -162,6 +162,14 @@ pub fn add_source(
         state.ignore_hashes.clone(),
         watcher_slots.inner().clone(),
     );
+    // Mirror into hub if configured. Failures don't block the add — the
+    // user can fix the hub setup later and re-run "Resync hub".
+    {
+        let src_for_hub = source.clone();
+        try_hub(&state, |hub| {
+            crate::hub::create_mirror(hub, &src_for_hub).map(|_| ())
+        });
+    }
     let _ = app.emit("sources-changed", ());
     Ok(source)
 }
@@ -197,9 +205,13 @@ pub fn remove_source(
     // the remaining sources (simplest correct option; sources count is small).
     let remaining = state.config.read().unwrap().sources.clone();
     state.registry.write().unwrap().rebuild_from_sources(&remaining)?;
+    // Clear this source's hub mirror so AI / scripts don't see a dead link.
+    {
+        let removed_for_hub = removed.clone();
+        try_hub(&state, |hub| crate::hub::remove_mirror(hub, &removed_for_hub));
+    }
     let _ = app.emit("sources-changed", ());
     let _ = app.emit("tasks-updated", ());
-    let _ = removed;
     Ok(())
 }
 
@@ -212,6 +224,10 @@ pub fn update_source(
     label: Option<String>,
     project_root: Option<PathBuf>,
 ) -> Result<Source> {
+    // Snapshot the source's pre-update form so we can clean up its old
+    // hub mirror (which is keyed by the old label).
+    let previous = find_source_by_id(&state, &source_id)?;
+
     let mut cfg = state.config.write().unwrap();
     let src = cfg
         .sources
@@ -223,6 +239,21 @@ pub fn update_source(
     let updated = src.clone();
     config::save_to(&state.config_path, &cfg)?;
     drop(cfg);
+
+    // Re-mirror under the new label, then drop the old name if it differs.
+    {
+        let prev = previous.clone();
+        let new = updated.clone();
+        try_hub(&state, |hub| {
+            crate::hub::create_mirror(hub, &new).map(|_| ())?;
+            let old_path = crate::hub::mirror_path_for(hub, &prev);
+            let new_path = crate::hub::mirror_path_for(hub, &new);
+            if old_path != new_path {
+                let _ = crate::hub::remove_mirror(hub, &prev);
+            }
+            Ok(())
+        });
+    }
     let _ = app.emit("sources-changed", ());
     Ok(updated)
 }
@@ -316,6 +347,47 @@ pub fn run_quick_action(
     }
 }
 
+/// Point the hub mirror at `path` (or clear it with `None`). When set,
+/// every existing source is immediately mirrored into it. The previous
+/// hub (if any) keeps its entries — they're just stale links, the user
+/// can delete the folder themselves.
+#[tauri::command]
+pub fn set_hub_folder(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    path: Option<PathBuf>,
+) -> Result<()> {
+    // Canonicalise so saved value matches what mirror_path_for produces.
+    let canonical = match path {
+        Some(p) => Some(dunce::canonicalize(&p).unwrap_or(p)),
+        None => None,
+    };
+    let sources_snapshot = {
+        let mut cfg = state.config.write().unwrap();
+        cfg.hub_folder = canonical.clone();
+        config::save_to(&state.config_path, &cfg)?;
+        cfg.sources.clone()
+    };
+    if let Some(hub) = &canonical {
+        crate::hub::sync_all(hub, &sources_snapshot)?;
+    }
+    let _ = app.emit("sources-changed", ());
+    Ok(())
+}
+
+/// Resync every source into the configured hub. Used after a manual
+/// "Repair hub" click or when mirrors get out of date because the user
+/// renamed labels while the hub was unset.
+#[tauri::command]
+pub fn resync_hub(state: State<'_, AppState>, app: AppHandle) -> Result<()> {
+    let cfg = state.config.read().unwrap().clone();
+    if let Some(hub) = &cfg.hub_folder {
+        crate::hub::sync_all(hub, &cfg.sources)?;
+        let _ = app.emit("sources-changed", ());
+    }
+    Ok(())
+}
+
 /// Replace the list of quick actions shown on every source header.
 /// Order in the vec is preserved — that's the display order.
 #[tauri::command]
@@ -387,4 +459,15 @@ fn find_source_by_id(state: &AppState, source_id: &str) -> Result<Source> {
         .find(|s| s.id == source_id)
         .cloned()
         .ok_or_else(|| AppError::SourceNotFound(source_id.to_string()))
+}
+
+/// Run a fallible hub-sync operation and swallow the error. We don't
+/// want a junction-failure (e.g. cross-volume) to make `add_source`
+/// itself fail — the source is added regardless, the user just needs to
+/// fix the hub setup. The error surfaces via the next `resync_hub`.
+fn try_hub<F: FnOnce(&std::path::Path) -> Result<()>>(state: &AppState, run: F) {
+    let hub = state.config.read().unwrap().hub_folder.clone();
+    if let Some(hub) = hub {
+        let _ = run(&hub);
+    }
 }

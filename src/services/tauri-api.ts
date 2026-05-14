@@ -50,6 +50,9 @@ export const api = {
   openUrl: (url: string) => invoke<void>('open_url', { url }),
   setAlwaysOnTop: (on: boolean) => invoke<void>('set_always_on_top', { on }),
 
+  setHubFolder: (path: string | null) => invoke<void>('set_hub_folder', { path }),
+  resyncHub: () => invoke<void>('resync_hub'),
+
   pickFolder: async (): Promise<string | null> => {
     const sel = await open({ directory: true, multiple: false });
     return typeof sel === 'string' ? sel : null;

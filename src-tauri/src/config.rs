@@ -125,6 +125,7 @@ mod tests {
             always_on_top: true,
             file_labels: HashMap::new(),
             enabled_quick_actions: crate::types::default_quick_actions(),
+            hub_folder: None,
         };
         save_to(&p, &cfg).unwrap();
 

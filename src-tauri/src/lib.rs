@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod error;
+mod hub;
 mod parser;
 mod registry;
 mod shell;
@@ -172,6 +173,8 @@ pub fn run() {
             commands::open_in_claude_code,
             commands::run_quick_action,
             commands::set_enabled_quick_actions,
+            commands::set_hub_folder,
+            commands::resync_hub,
             commands::open_url,
             commands::set_always_on_top,
             commands::show_window,

@@ -103,6 +103,13 @@ pub struct AppConfig {
     /// Empty = no action buttons. Persisted so the user only configures once.
     #[serde(default = "default_quick_actions")]
     pub enabled_quick_actions: Vec<QuickActionKind>,
+    /// Central folder where every configured source is mirrored — file
+    /// sources via hard link, folder sources via directory junction
+    /// (Windows). `None` = feature off (default). When set, AI tools and
+    /// scripts can find every project's TODO inside one folder instead
+    /// of crawling each repo individually.
+    #[serde(default)]
+    pub hub_folder: Option<PathBuf>,
 }
 
 impl Default for AppConfig {
@@ -114,6 +121,7 @@ impl Default for AppConfig {
             always_on_top: true,
             file_labels: HashMap::new(),
             enabled_quick_actions: default_quick_actions(),
+            hub_folder: None,
         }
     }
 }

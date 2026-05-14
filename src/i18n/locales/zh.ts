@@ -57,11 +57,20 @@ export default {
       appearance: '外观',
       language: '语言',
       quickActions: '快捷动作',
+      hub: '中枢文件夹',
       sources: '任务源',
       about: '关于',
     },
     quickActions: {
       hint: '显示在每个源标题栏上的按钮。不需要的关掉即可。',
+    },
+    hub: {
+      hint: '把所有任务源镜像到一个文件夹里——文件用硬链接，文件夹用 junction，两端实时同步。AI 工具进这一个文件夹就能管理所有 TODO。仅支持同一磁盘卷。',
+      choose: '选择文件夹…',
+      change: '更换',
+      disable: '关闭',
+      resync: '重新同步',
+      resyncTitle: '重建所有镜像——在中枢关闭期间改过 source 名后用这个修复。',
     },
     theme: {
       label: '主题',

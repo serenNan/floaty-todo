@@ -57,11 +57,20 @@ export default {
       appearance: 'Appearance',
       language: 'Language',
       quickActions: 'Quick actions',
+      hub: 'Hub folder',
       sources: 'Sources',
       about: 'About',
     },
     quickActions: {
       hint: 'Buttons shown on every source header. Toggle off the ones you don\'t want.',
+    },
+    hub: {
+      hint: 'Mirror every source into one folder via OS-level filesystem links — files use hard links, folders use junctions. AI tools can manage all your TODOs from one place. Same-volume only.',
+      choose: 'Choose folder…',
+      change: 'Change',
+      disable: 'Disable',
+      resync: 'Resync',
+      resyncTitle: 'Recreate every mirror — use after renaming sources while the hub was off.',
     },
     theme: {
       label: 'Theme',

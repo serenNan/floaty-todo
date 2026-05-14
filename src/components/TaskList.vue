@@ -156,6 +156,7 @@ function toggleCollapseAll() {
           :key="g.source.id"
           :source="g.source"
           :tasks="g.tasks"
+          @open-settings="$emit('openSettings')"
         />
       </template>
     </div>

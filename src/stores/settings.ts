@@ -72,6 +72,11 @@ export const useSettingsStore = defineStore('settings', () => {
     await load();
   }
 
+  async function reorderSources(orderedIds: string[]) {
+    await api.reorderSources(orderedIds);
+    await load();
+  }
+
   async function setFileLabel(filePath: string, label: string | null) {
     await api.setFileLabel(filePath, label);
     await load();
@@ -139,6 +144,7 @@ export const useSettingsStore = defineStore('settings', () => {
     removeSource,
     updateSource,
     setDefaultSource,
+    reorderSources,
     setFileLabel,
     setEnabledQuickActions,
     setAlwaysOnTop,

@@ -1,5 +1,37 @@
 # 变更日志
 
+## 2026-05-15 drag-reorder whole source via the `⋯` button (pointer events)
+
+The right-most `⋯` button on each source header is now both the
+**settings shortcut** (single click) and the **source drag handle**
+(press-and-drag onto another source header to reorder). Inline source
+editor inside `SourceGroup` is removed — editing now lives in the
+existing Settings page.
+
+HTML5 native drag-and-drop is unusable inside Tauri 2's WebView2:
+`dragstart` fires but `dragover` is never delivered to the page, so
+the cursor is stuck on "forbidden" for the entire drag. Switched to
+pointer events instead, which work in any environment.
+
+- `src-tauri/src/commands.rs` (+ `lib.rs` registration): new
+  `reorder_sources(ordered_ids)` Tauri command. Rejects partial lists
+  so a stale UI can't accidentally drop a source on reorder
+- `src/composables/useSourceDrag.ts` (new): `startSourceDrag({ e,
+  sourceId, onClick, onDrop })` — installs document-level
+  pointermove/up listeners, 5 px threshold separates click from drag,
+  target resolved via `elementFromPoint` walking up to a
+  `[data-source-id]` ancestor
+- `src/components/SourceGroup.vue`: dots button uses `@pointerdown` →
+  `startSourceDrag(...)`; header carries `data-source-id`. Inline
+  source editor + related state (`editing`/`labelDraft`/`rootDraft`
+  + handlers + dead CSS) deleted; source editing flows through the
+  Settings page only
+- `src/components/TaskList.vue`: forwards `SourceGroup`'s new
+  `open-settings` event up to the App-level view switcher
+- `src/services/tauri-api.ts` + `src/stores/settings.ts`: wrappers
+  for the new `reorder_sources` command (`api.reorderSources` /
+  `settings.reorderSources`)
+
 ## 2026-05-15 reveal-action icon: chunky filled folder (was outline + magnifier)
 
 The outlined folder + magnifier overlay looked busy at 14 px and read

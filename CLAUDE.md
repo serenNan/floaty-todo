@@ -1,92 +1,95 @@
-# Floaty Todo — Project Notes
+# Floaty Todo — 项目说明
 
-## Tech Stack
+## 技术栈
 
-- **Frontend:** Vue 3 + TypeScript, Vite 6, Pinia, vue-i18n (en/zh)
-- **Backend:** Tauri 2 (Rust), `tauri-plugin-dialog` (file picker)
-- **Package manager:** npm
-- **Identifier:** `com.serendipity.floaty-todo`
+- **前端：** Vue 3 + TypeScript、Vite 6、Pinia、vue-i18n（en/zh）
+- **后端：** Tauri 2（Rust）、`tauri-plugin-dialog`（文件选择器）
+- **包管理：** npm
+- **Identifier：** `com.serendipity.floaty-todo`
 
-## Structure
+## 目录结构
 
 ```
-src/              # Vue frontend
-src-tauri/        # Rust backend
-  src/lib.rs      # App init, tray, watcher dispatch + invoke_handler registration
-  src/main.rs     # Entry point (calls floaty_todo_lib::run())
-  src/commands.rs # Tauri IPC commands + AppState (registry/config/watcher glue)
-  src/types.rs    # Task, AppConfig, ContentHash
-  src/error.rs    # AppError (thiserror) + Serialize impl for Tauri
-  src/parser.rs   # Markdown task parser (parse_line / parse_file)
-  src/storage.rs  # Atomic file writes: toggle_task / append_task
-  src/config.rs   # AppConfig load/save (JSON, tolerant)
-  src/registry.rs # In-memory TaskRegistry (per-source scan + per-file refresh)
-  src/watcher.rs  # Debounced fs watcher (one per source) + IgnoreHashes loop prevention
-  src/shell.rs    # External-process launchers (VS Code / terminal) with platform cascade
-  src/hub.rs      # Hub-folder mirror via hard-link / NTFS junction
-  tauri.conf.json # App config (productName, identifier, devUrl, window 340×520 transparent decorations:false skipTaskbar alwaysOnTop)
-  Cargo.toml      # Rust deps (crate name: floaty-todo, lib: floaty_todo_lib)
+src/              # Vue 前端
+src-tauri/        # Rust 后端
+  src/lib.rs      # App 初始化、托盘、watcher 调度 + invoke_handler 注册
+  src/main.rs     # 入口（调用 floaty_todo_lib::run()）
+  src/commands.rs # Tauri IPC 命令 + AppState（registry/config/watcher 粘合层）
+  src/types.rs    # Task / AppConfig / ContentHash
+  src/error.rs    # AppError（thiserror）+ Tauri 用的 Serialize 实现
+  src/parser.rs   # Markdown 任务解析（parse_line / parse_file）
+  src/storage.rs  # 原子文件写入：toggle_task / append_task
+  src/config.rs   # AppConfig 加载/保存（JSON，容错）
+  src/registry.rs # 内存 TaskRegistry（按 source 扫描 + 按文件刷新）
+  src/watcher.rs  # 防抖 fs watcher（每个 source 一个）+ IgnoreHashes 防回写循环
+  src/shell.rs    # 外部进程启动器（VS Code / 终端），含平台级联兜底
+  src/hub.rs      # Hub 目录通过 hard-link / NTFS junction 做镜像
+  tauri.conf.json # App 配置（productName / identifier / devUrl / window 340×520 transparent decorations:false skipTaskbar alwaysOnTop）
+  Cargo.toml      # Rust 依赖（crate 名 floaty-todo，lib 名 floaty_todo_lib）
 ```
 
-## Data Model
+## 数据模型
 
-Multi-source aggregation (v0.2): user configures **N task sources**, each one of:
-- **Folder source** — recursive `.md` scan under `path`
-- **File source** — one specific `.md` file (watcher tracks parent dir, filters by filename)
+多 source 聚合（v0.2）：用户可配置 **N 个任务源**，每个是：
+- **Folder source** — 递归扫描 `path` 下所有 `.md`
+- **File source** — 单个 `.md` 文件（watcher 监听父目录，按文件名过滤）
 
-Each `Source` carries `id` (8-byte hex sha256 of canonical path), `path`, `kind`, optional `label`, and optional `project_root` (used by `open_in_vscode` / `open_in_terminal`; defaults: Folder→`path`, File→`path.parent()`).
+每个 `Source` 有 `id`（canonical 路径的 8 字节 hex sha256）、`path`、`kind`、可选 `label`、可选 `project_root`（被 `open_in_vscode` / `open_in_terminal` 使用；默认值：Folder → `path`，File → `path.parent()`）。
 
-Tasks reference their source via `Task.source_id`. The registry keys files by `(source_id, canonical_path)` so a file appearing under two sources stays independent.
+任务通过 `Task.source_id` 关联到 source。registry 用 `(source_id, canonical_path)` 做键，所以同一个文件出现在两个 source 下也互相独立。
 
-**Hub folder (opt-in):** `AppConfig.hub_folder` points at a central directory where every source is mirrored — file sources via `std::fs::hard_link` (same inode = real two-way sync), folder sources via NTFS junction on Windows (`cmd mklink /J`) or POSIX symlink elsewhere. Hub-side filenames are derived from the source label (sanitised). Same-volume only; cross-volume mirrors fail with an actionable error and don't block source CRUD.
+**Hub 目录（可选）：** `AppConfig.hub_folder` 指向一个中心目录，所有 source 镜像到这里 —— File source 用 `std::fs::hard_link`（同 inode = 真双向同步），Folder source 在 Windows 上用 NTFS junction（`cmd mklink /J`），其它平台用 POSIX symlink。Hub 侧文件名从 source label 派生（已清洗）。只支持同卷；跨卷镜像会失败并报错，但不影响 source CRUD。
 
-## Rust Modules
+## Rust 模块
 
-| Module | Role |
+| 模块 | 职责 |
 |---|---|
-| `commands` | `AppState` + Tauri commands: `get_tasks`/`toggle_task`/`add_task`, source CRUD (`list_sources`/`add_source`/`remove_source`/`update_source`/`set_default_source`), per-file label override (`set_file_label`), quick-actions (`open_in_vscode`/`open_in_terminal`/`open_in_claude_code`/`run_quick_action`/`set_enabled_quick_actions`/`open_url`), hub (`set_hub_folder`/`resync_hub`), window control. `add_source` infers a default label from `project_root`'s folder name when the caller doesn't supply one; source CRUD also calls into `hub` to maintain mirror entries |
-| `hub` | Hub-folder mirror engine: `mirror_path_for(hub, source)` derives the sanitised link name, `create_mirror` / `remove_mirror` / `sync_all` manage individual entries (idempotent, orphan-pruning); file sources use `std::fs::hard_link`, folder sources use NTFS junction on Windows / POSIX symlink elsewhere |
-| `shell` | Side-effect launchers: `open_vscode(path)`, `open_terminal(path)` (Windows: wt → pwsh → powershell; macOS: `open -a Terminal`; Linux: x-terminal-emulator → gnome-terminal → konsole → xterm), `open_claude_code(path)` (Windows: `wt -d <p> -- cmd /k claude.cmd`; macOS: Terminal.app via osascript; Linux: terminal-emulator `-e claude`), `reveal_in_explorer(path)` (Windows: `explorer.exe` with `/select,<file>` for files; macOS: `open -R` for files; Linux: `xdg-open` on containing dir), `open_url(url)` (default browser via OS handler) |
-| `registry` | `TaskRegistry` keyed by `(source_id, canonical_path)`; `rebuild_from_sources` / `rebuild_source` / `refresh_file(source, file)` |
-| `watcher` | `start_watching_source` (Folder = recursive, File = parent dir + filename filter) + `IgnoreHashes` for write-loop prevention; one `WatcherHandle` per source in `WatcherSlots: Arc<Mutex<HashMap<source_id, WatcherHandle>>>` |
-| `storage` | `toggle_task` / `append_task` — atomic writes via `tempfile::NamedTempFile` |
-| `config` | `load_from` / `save_to` / `config_file` — JSON, corrupt-tolerant |
-| `parser` | `parse_line` / `parse_file(path, source_id)` — regex, stable SHA-256 task IDs |
-| `types` | `Task` (with `source_id`), `Source` / `SourceKind` (Folder/File), `QuickActionKind` (Vscode/Terminal/ClaudeCode/Reveal), `AppConfig` (`sources` + `default_source_id` + `file_labels` + `enabled_quick_actions` + `hub_folder`), `ContentHash`, `file_label_key()`, `default_quick_actions()` |
-| `error` | `AppError` (Io/Json/Watcher/NoSources/SourceNotFound/DuplicateSource/InvalidSourcePath/TaskNotFound/NotATaskLine/CommandFailed) |
+| `commands` | `AppState` + Tauri 命令：`get_tasks` / `toggle_task` / `update_task` / `add_task`、source CRUD（`list_sources` / `add_source` / `remove_source` / `update_source` / `reorder_sources` / `set_default_source`）、单文件 label 覆盖（`set_file_label`）、快捷动作（`open_in_vscode` / `open_in_terminal` / `open_in_claude_code` / `run_quick_action` / `set_enabled_quick_actions` / `open_url`）、hub（`set_hub_folder` / `resync_hub`）、窗口控制。`add_source` 在调用者没传 label 时会从 `project_root` 的目录名推断默认 label；source CRUD 也会调 `hub` 维护镜像项 |
+| `hub` | Hub 镜像引擎：`mirror_path_for(hub, source)` 派生清洗后的 link 名；`create_mirror` / `remove_mirror` / `sync_all` 管理每个镜像项（幂等，会清理孤儿）；File source 用 `std::fs::hard_link`，Folder source 在 Windows 上用 NTFS junction，其它平台用 POSIX symlink |
+| `shell` | 副作用启动器：`open_vscode(path)`、`open_terminal(path)`（Windows：wt → pwsh → powershell；macOS：`open -a Terminal`；Linux：x-terminal-emulator → gnome-terminal → konsole → xterm）、`open_claude_code(path)`（Windows：`wt -d <p> -- powershell -NoExit -Command "& '%USERPROFILE%\.local\bin\claude.exe' --dangerously-skip-permissions"` —— 用绝对路径是因为 cmd 的 PATH 一般没有 `~/.local/bin`；macOS：osascript 调起 Terminal.app；Linux：terminal-emulator `-e claude`）、`reveal_in_explorer(path)`（Windows：`explorer.exe /select,<file>` 处理文件；macOS：`open -R` 处理文件；Linux：`xdg-open` 父目录）、`open_url(url)`（系统默认浏览器） |
+| `registry` | `TaskRegistry` 以 `(source_id, canonical_path)` 为键；`rebuild_from_sources` / `rebuild_source` / `refresh_file(source, file)` |
+| `watcher` | `start_watching_source`（Folder = 递归；File = 监听父目录 + 文件名过滤）+ `IgnoreHashes` 防写回循环；每个 source 在 `WatcherSlots: Arc<Mutex<HashMap<source_id, WatcherHandle>>>` 里一个 `WatcherHandle` |
+| `storage` | `toggle_task` / `update_task_text` / `append_task` —— 通过 `tempfile::NamedTempFile` 原子写。`update_task_text` 逐字节保留行前的缩进 / bullet / checkbox 前缀；拒绝空文本与多行输入 |
+| `config` | `load_from` / `save_to` / `config_file` —— JSON，损坏容忍 |
+| `parser` | `parse_line` / `parse_file(path, source_id)` —— 正则，稳定的 SHA-256 任务 ID |
+| `types` | `Task`（带 `source_id`）、`Source` / `SourceKind`（Folder / File）、`QuickActionKind`（Vscode / Terminal / ClaudeCode / Reveal）、`AppConfig`（`sources` + `default_source_id` + `file_labels` + `enabled_quick_actions` + `hub_folder`）、`ContentHash`、`file_label_key()`、`default_quick_actions()` |
+| `error` | `AppError`（Io / Json / Watcher / NoSources / SourceNotFound / DuplicateSource / InvalidSourcePath / TaskNotFound / NotATaskLine / CommandFailed） |
 
-## Frontend Modules
+## 前端模块
 
-| Module | Role |
+| 模块 | 职责 |
 |---|---|
-| `src/types/task.ts` | `Task` / `Source` / `SourceKind` / `AppConfig` TS interfaces (mirror Rust) |
-| `src/services/tauri-api.ts` | `api` object — wraps `invoke` commands + dialog pickers (`pickFolder` / `pickMarkdownFile`) + event listeners (`tasks-updated`, `sources-changed`, `request-manage-sources`) |
-| `src/stores/tasks.ts` | `useTaskStore` — `tasks` / `sortedTasks` / `loading` / `error`; `refresh` / `silentRefresh` / `toggle` / `add(text, sourceId?)` |
-| `src/stores/settings.ts` | `useSettingsStore` — `config` / `sources` / `hasSources` / `defaultSourceId` / `fileLabels` / `enabledQuickActions` / `alwaysOnTop` / `hubFolder` / `scanningSourceIds`; CRUD via `addSource` / `removeSource` / `updateSource` / `setDefaultSource` / `setFileLabel` / `setEnabledQuickActions` / `setAlwaysOnTop` / `toggleAlwaysOnTop` / `setHubFolder` / `resyncHub`; pickers `pickAndAddFolder` / `pickAndAddFile` / `pickAndSetHubFolder`; `markScanning(id, on)` toggle |
-| `src/main.ts` | App entry — wires `createPinia()` + i18n then mounts `App` |
-| `src/i18n/` | `vue-i18n` setup + `locales/en.ts` / `locales/zh.ts`; `setLocale()` persists to localStorage `floaty.locale` and syncs `<html lang>` |
-| `src/composables/useTheme.ts` | Theme composable — `currentTheme` / `effectiveTheme` / `setTheme`; localStorage `floaty.theme`, system media query listener |
-| `src/composables/useConfirm.ts` | Singleton `confirm({ title, message, danger, … }) → Promise<boolean>` API for the in-app modal |
-| `src/composables/useCollapse.ts` | Counter-style global trigger — `collapseAll()` / `expandAll()` increment tokens; `bindCollapse(setter)` watches both inside a component so SourceGroup / FileGroup can flip their local `collapsed` ref in response |
-| `src/components/ConfirmDialog.vue` | Teleport-mounted modal driven by `useConfirm`; backdrop click / Esc cancels, focus-traps confirm button, danger variant for destructive actions |
-| `src/utils/inline-md.ts` | Zero-dep inline-only Markdown parser → `InlineSegment[]` (text / code / bold / italic / strike / link); used by `TaskItem` to render task text safely (no v-html) |
-| `src/views/SettingsView.vue` | Full-screen settings page — Appearance (theme segmented), Language (locale select), Quick actions (per-kind toggles), Hub folder (choose / resync / change / disable), Sources (cards with ⎘ / ▷ / 📝 / 🗑 + inline editor), About; emits `back` |
-| `src/components/SourceGroup.vue` | Collapsible per-source group: clicking anywhere on the header toggles collapse; header has caret + kind emoji (flips on collapse) + label + default badge + scan spinner + counts + drag-reorderable brand-coloured `QuickActionIcon` chips + ⋯ edit; inline editor (label / project_root / set-default / remove). Folder sources bucket tasks by `source_file` and render nested `FileGroup`s (auto-collapsed when > 50 tasks); file sources render TaskItems directly. Subscribes to `useCollapse` so the global "Collapse all" works. |
-| `src/components/icons/QuickActionIcon.vue` | Brand-coloured inline SVGs for the three quick-action kinds (VS Code / Terminal / Claude Code); zero deps, dark-mode-aware |
-| `src/components/icons/Icon.vue` | Central cartoon SVG library; `name: IconName` literal-string union → 20 Lucide-inspired outline icons (pin / settings / refresh / chevron-* / pencil / folder / file / trash / sun / moon / monitor / arrow-left / loader / etc); single source of truth for every glyph that isn't a brand mark |
-| `src/components/FileGroup.vue` | Per-file sub-group inside a `SourceGroup`: independently collapsible, hover-revealed ✎ rename button, inline rename input (Enter / Esc / ↺ reset); falls back to the file's relative path inside the source when no custom label is set |
-| `src/components/TaskList.vue` | Grouped task view (renders `SourceGroup` per source in config order); QuickAdd input + per-task source dropdown; footer with bottom-left ⚙ Settings + totals + ↻ refresh |
-| `src/components/EmptyState.vue` | First-run landing: 📁 Folder / 📄 File picker buttons + bottom-left ⚙ Settings corner button |
+| `src/types/task.ts` | `Task` / `Source` / `SourceKind` / `AppConfig` TS 接口（与 Rust 对齐） |
+| `src/services/tauri-api.ts` | `api` 对象 —— 封装 `invoke` 命令 + 对话框选择器（`pickFolder` / `pickMarkdownFile`）+ 事件监听器（`tasks-updated` / `sources-changed` / `request-manage-sources`） |
+| `src/stores/tasks.ts` | `useTaskStore` —— `tasks` / `sortedTasks` / `loading` / `error`；`refresh` / `silentRefresh` / `toggle` / `update(id, text)` / `add(text, sourceId?)` |
+| `src/stores/settings.ts` | `useSettingsStore` —— `config` / `sources` / `hasSources` / `defaultSourceId` / `fileLabels` / `enabledQuickActions` / `alwaysOnTop` / `hubFolder` / `scanningSourceIds`；CRUD：`addSource` / `removeSource` / `updateSource` / `setDefaultSource` / `reorderSources` / `setFileLabel` / `setEnabledQuickActions` / `setAlwaysOnTop` / `toggleAlwaysOnTop` / `setHubFolder` / `resyncHub`；选择器 `pickAndAddFolder` / `pickAndAddFile` / `pickAndSetHubFolder`；`markScanning(id, on)` 切换扫描状态 |
+| `src/main.ts` | App 入口 —— 装配 `createPinia()` + i18n 后挂载 `App` |
+| `src/i18n/` | `vue-i18n` 配置 + `locales/en.ts` / `locales/zh.ts`；`setLocale()` 持久化到 localStorage `floaty.locale` 并同步 `<html lang>` |
+| `src/composables/useTheme.ts` | 主题 composable —— `currentTheme` / `effectiveTheme` / `setTheme`；localStorage `floaty.theme`，监听系统配色 media query |
+| `src/composables/useConfirm.ts` | 单例 `confirm({ title, message, danger, … }) → Promise<boolean>`，应用内确认弹窗 |
+| `src/composables/useSourceDrag.ts` | Pointer-events 版 source 拖拽状态（Tauri WebView2 不发 HTML5 native `dragover`，所以绕开 `draggable="true"`）。模块级 `draggedSourceId` / `dropTargetSourceId` ref + `startSourceDrag({ e, sourceId, onClick, onDrop })` 入口：挂 document 级 pointermove/up，通过 `elementFromPoint` 查目标元素再向上爬 DOM 找 `[data-source-id]` |
+| `src/composables/useTaskEditor.ts` | 单例 `editTask(task) → Promise<string \| null>` API，驱动任务文本编辑模态；返回 null 表示取消 / 无改动 |
+| `src/components/TaskEditorDialog.vue` | 由 `useTaskEditor` 驱动的 Teleport 模态：显示「文件·行号」副标题、单行输入；Enter 保存 / Esc 取消；在 App 根处挂一次，与 `<ConfirmDialog />` 同级 |
+| `src/composables/useCollapse.ts` | 计数器风格的全局触发器 —— `collapseAll()` / `expandAll()` 自增 token；组件内 `bindCollapse(setter)` 监听这两个值，让 SourceGroup / FileGroup 翻转自身的 `collapsed` ref |
+| `src/components/ConfirmDialog.vue` | 由 `useConfirm` 驱动的 Teleport 模态；点遮罩 / Esc 取消，confirm 按钮 focus-trap，危险动作有红色变体 |
+| `src/utils/inline-md.ts` | 零依赖 inline-only Markdown 解析器 → `InlineSegment[]`（text / code / bold / italic / strike / link）；`TaskItem` 用它安全渲染任务文本，不走 v-html |
+| `src/views/SettingsView.vue` | 全屏设置页 —— 外观（主题分段控件）、语言（locale 下拉）、快捷动作（按类型开关）、Hub 目录（选择 / 重同步 / 更改 / 关闭）、Sources（卡片 + ⎘ / ▷ / 📝 / 🗑 + 内嵌编辑器）、关于；emit `back` |
+| `src/components/SourceGroup.vue` | 可折叠的单 source 组：点 header 任意处切换折叠；header 带 `data-source-id` 供拖拽目标识别。Header 含 caret + 类型 emoji（折叠时翻转）+ label + 默认徽章 + 扫描旋转图标 + 数量 + 可拖排序的品牌色 `QuickActionIcon` 按钮 + 一个 `⋯` 按钮 —— **单击打开 Settings，按住拖动可重排整个 source**（用 `useSourceDrag`）。Folder source 按 `source_file` 分桶渲染嵌套 `FileGroup`（任务数 > 50 时初始全部折叠）；File source 直接渲染 TaskItem。订阅 `useCollapse` 响应全局「Collapse all」 |
+| `src/components/icons/QuickActionIcon.vue` | 三个快捷动作的品牌色 inline SVG（VS Code / Terminal / Claude Code）；零依赖，适配深浅色 |
+| `src/components/icons/Icon.vue` | 中心化 SVG 图标库；`name: IconName` 字符串字面量联合 → 20 个 Lucide 风格的描边图标（pin / settings / refresh / chevron-* / pencil / folder / file / trash / sun / moon / monitor / arrow-left / loader 等）；非品牌标记的所有图标都来自这里 |
+| `src/components/FileGroup.vue` | `SourceGroup` 内的单文件子组：独立可折叠、悬停才显示的 ✎ 重命名按钮、内嵌重命名输入（Enter / Esc / ↺ 重置）；没自定义 label 时落到文件在 source 内的相对路径 |
+| `src/components/TaskList.vue` | 分组任务视图（按 config 顺序逐个渲染 `SourceGroup`）；QuickAdd 输入框 + 单任务 source 下拉；footer 左下角 ⚙ Settings + 计数 + ↻ 刷新 |
+| `src/components/EmptyState.vue` | 首次进入落地页：📁 Folder / 📄 File 选择器按钮 + 左下角 ⚙ Settings 角标按钮 |
 
-## Build Commands
+## 构建命令
 
 ```powershell
-npm run tauri dev    # dev mode (Vite + cargo run)
-npm run tauri build  # production bundle
+npm run tauri dev    # 开发模式（Vite + cargo run）
+npm run tauri build  # 生产构建
 ```
 
-## Key Notes
+## 关键注意点
 
-- `src-tauri/src/main.rs` calls `floaty_todo_lib::run()` — lib crate name is `floaty_todo_lib` (underscores, not hyphens)
-- Dev URL is `http://localhost:1420` (configured in `tauri.conf.json`)
-- `node_modules/` and `src-tauri/target/` are gitignored
+- `src-tauri/src/main.rs` 调的是 `floaty_todo_lib::run()` —— lib crate 名是 `floaty_todo_lib`（下划线，不是连字符）
+- Dev URL 是 `http://localhost:1420`（在 `tauri.conf.json` 配置）
+- `node_modules/` 和 `src-tauri/target/` 已 gitignore

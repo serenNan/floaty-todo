@@ -4,8 +4,12 @@ import { useI18n } from 'vue-i18n';
 import type { QuickActionKind, Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
-import { confirm } from '../composables/useConfirm';
 import { bindCollapse } from '../composables/useCollapse';
+import {
+  draggedSourceId,
+  dropTargetSourceId,
+  startSourceDrag,
+} from '../composables/useSourceDrag';
 import FileGroup from './FileGroup.vue';
 import TaskItem from './TaskItem.vue';
 import QuickActionIcon from './icons/QuickActionIcon.vue';
@@ -18,13 +22,11 @@ import Icon from './icons/Icon.vue';
 const BIG_SOURCE_TASK_THRESHOLD = 50;
 
 const props = defineProps<{ source: Source; tasks: Task[] }>();
+const emit = defineEmits<{ 'open-settings': [] }>();
 const { t } = useI18n();
 const settings = useSettingsStore();
 
-const collapsed = ref(false);
-const editing = ref(false);
-const labelDraft = ref('');
-const rootDraft = ref('');
+const collapsed = ref(true);
 const actionError = ref<string | null>(null);
 
 // React to global "Collapse all" / "Expand all" from the footer button.
@@ -65,53 +67,6 @@ const fileGroups = computed(() => {
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([filePath, fileTasks]) => ({ filePath, tasks: fileTasks }));
 });
-
-function startEdit() {
-  labelDraft.value = props.source.label ?? '';
-  rootDraft.value = props.source.project_root ?? '';
-  actionError.value = null;
-  editing.value = true;
-}
-
-function cancelEdit() {
-  editing.value = false;
-  actionError.value = null;
-}
-
-async function saveEdit() {
-  try {
-    await settings.updateSource({
-      sourceId: props.source.id,
-      label: labelDraft.value.trim() || null,
-      projectRoot: rootDraft.value.trim() || null,
-    });
-    editing.value = false;
-  } catch (e: any) {
-    actionError.value = String(e);
-  }
-}
-
-async function pickRoot() {
-  const p = await api.pickFolder();
-  if (p) rootDraft.value = p;
-}
-
-async function setDefault() {
-  try { await settings.setDefaultSource(props.source.id); }
-  catch (e: any) { actionError.value = String(e); }
-}
-
-async function removeSource() {
-  const ok = await confirm({
-    title: t('confirm.removeSourceTitle'),
-    message: t('confirm.removeSourceMessage', { label: displayLabel.value }),
-    confirmText: t('confirm.removeSourceConfirm'),
-    danger: true,
-  });
-  if (!ok) return;
-  try { await settings.removeSource(props.source.id); }
-  catch (e: any) { actionError.value = String(e); }
-}
 
 async function runAction(kind: QuickActionKind) {
   try { await api.runQuickAction(props.source.id, kind); }
@@ -166,6 +121,33 @@ function onActionDragEnd() {
   dropTargetKind.value = null;
 }
 
+// Pointer-events based source-drag. Tauri's WebView2 doesn't deliver
+// HTML5 `dragover` events to in-page elements, so we can't use the
+// `draggable="true"` flow. Pointer events work reliably everywhere.
+const isSourceDragging = computed(() => draggedSourceId.value === props.source.id);
+const isSourceDropTarget = computed(() => dropTargetSourceId.value === props.source.id);
+
+function onDotsPointerDown(e: PointerEvent) {
+  if (e.button !== 0) return; // left button only
+  e.preventDefault();
+  startSourceDrag({
+    e,
+    sourceId: props.source.id,
+    onClick: () => emit('open-settings'),
+    onDrop: async (targetId: string) => {
+      const order = settings.sources.map(s => s.id);
+      const srcIdx = order.indexOf(props.source.id);
+      if (srcIdx < 0) return;
+      order.splice(srcIdx, 1);
+      const tgtIdx = order.indexOf(targetId);
+      if (tgtIdx < 0) order.push(props.source.id);
+      else order.splice(tgtIdx, 0, props.source.id);
+      try { await settings.reorderSources(order); }
+      catch (err: any) { actionError.value = String(err); }
+    },
+  });
+}
+
 interface ActionMeta {
   kind: QuickActionKind;
   i18n: string;
@@ -199,6 +181,11 @@ const kindEmoji = computed(() => {
   <section class="group" :class="{ collapsed }">
     <header
       class="group-head"
+      :class="{
+        'source-dragging': isSourceDragging,
+        'source-drop-target': isSourceDropTarget,
+      }"
+      :data-source-id="source.id"
       @click="collapsed = !collapsed"
       :title="collapsed ? t('source.expand') : t('source.collapse')"
     >
@@ -215,7 +202,11 @@ const kindEmoji = computed(() => {
         <Icon name="loader" :size="14" />
       </span>
       <span class="counts">
-        {{ counts.todo }}<span v-if="counts.done"> · {{ counts.done }}✓</span>
+        <span class="count-todo">{{ counts.todo }}</span>
+        <template v-if="counts.done">
+          <span class="count-sep"> · </span>
+          <span class="count-done">{{ counts.done }}</span>
+        </template>
       </span>
       <!-- Actions cluster: clicks here must NOT bubble to the header
            toggle, otherwise tapping an action would collapse the group.
@@ -230,47 +221,27 @@ const kindEmoji = computed(() => {
             'drop-target': dropTargetKind === a.kind,
           }"
           draggable="true"
-          @dragstart="onActionDragStart($event, a.kind)"
+          @dragstart.stop="onActionDragStart($event, a.kind)"
           @dragover="onActionDragOver($event, a.kind)"
           @dragleave="onActionDragLeave(a.kind)"
           @drop="onActionDrop($event, a.kind)"
-          @dragend="onActionDragEnd"
+          @dragend.stop="onActionDragEnd"
           @click="runAction(a.kind)"
           :title="t(a.i18n)"
         >
           <QuickActionIcon :kind="a.kind" />
         </button>
-        <button class="icon-btn" :class="{ active: editing }" @click="editing ? cancelEdit() : startEdit()" :title="t('source.edit')">
+        <button
+          class="icon-btn drag-handle"
+          @pointerdown.stop="onDotsPointerDown"
+          :title="t('source.edit')"
+        >
           <Icon name="more-horizontal" :size="14" />
         </button>
       </div>
     </header>
 
-    <div v-if="editing" class="editor" @click.stop>
-      <label>
-        {{ t('source.fields.label') }}
-        <input v-model="labelDraft" :placeholder="displayLabel" />
-      </label>
-      <label>
-        {{ t('source.fields.projectRoot') }} <span class="hint">{{ t('source.fields.projectRootHint') }}</span>
-        <span class="root-row">
-          <input v-model="rootDraft" :placeholder="source.path" />
-          <button type="button" class="pick-btn" @click="pickRoot" :title="t('source.actions.pickFolder')">
-            <Icon name="folder" :size="14" />
-          </button>
-        </span>
-      </label>
-      <div class="editor-actions">
-        <button type="button" class="ghost" :disabled="isDefault" @click="setDefault">
-          {{ isDefault ? t('source.actions.isDefault') : t('source.actions.setDefault') }}
-        </button>
-        <button type="button" class="danger" @click="removeSource">{{ t('source.actions.remove') }}</button>
-        <span class="spacer"></span>
-        <button type="button" class="ghost" @click="cancelEdit">{{ t('source.actions.cancel') }}</button>
-        <button type="button" class="primary" @click="saveEdit">{{ t('source.actions.save') }}</button>
-      </div>
-      <p v-if="actionError" class="error">{{ actionError }}</p>
-    </div>
+    <p v-if="actionError" class="error" @click="actionError = null">{{ actionError }}</p>
 
     <div v-if="!collapsed" class="rows">
       <div v-if="isScanning" class="scanning-row">{{ t('source.scanningHint') }}</div>
@@ -280,7 +251,7 @@ const kindEmoji = computed(() => {
            label twice. -->
       <template v-if="source.kind === 'file'">
         <TaskItem v-for="tk in tasks" :key="tk.id" :task="tk" />
-        <div v-if="tasks.length === 0 && !editing && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
+        <div v-if="tasks.length === 0 && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
       </template>
 
       <!-- Folder source: one FileGroup per .md file. -->
@@ -293,7 +264,7 @@ const kindEmoji = computed(() => {
           :tasks="g.tasks"
           :initial-collapsed="isBigSource"
         />
-        <div v-if="fileGroups.length === 0 && !editing && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
+        <div v-if="fileGroups.length === 0 && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
       </template>
     </div>
   </section>
@@ -315,9 +286,19 @@ const kindEmoji = computed(() => {
   color: var(--text);
   user-select: none;
   cursor: pointer;
-  transition: background 120ms ease-out;
+  transition: background 120ms ease-out, opacity 120ms ease-out;
 }
 .group-head:hover { background: var(--accent-soft); }
+
+/* Drag feedback: dim the source being dragged, accent-outline the drop
+   target so the user can see where the source will land. Outline (not
+   border) keeps the header height stable during the dance. */
+.group-head.source-dragging { opacity: 0.4; }
+.group-head.source-drop-target {
+  background: var(--accent-soft);
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
 
 .caret {
   width: 20px;
@@ -381,9 +362,11 @@ const kindEmoji = computed(() => {
 
 .counts {
   font-size: 0.72rem;
-  color: var(--text-muted);
   flex-shrink: 0;
 }
+.counts .count-todo { color: var(--count-todo); font-weight: 500; }
+.counts .count-sep  { color: var(--text-muted); }
+.counts .count-done { color: var(--count-done); font-weight: 500; }
 
 .actions {
   display: flex;
@@ -440,84 +423,20 @@ const kindEmoji = computed(() => {
   cursor: grabbing;
 }
 
-.editor {
-  padding: 0.5rem 0.6rem 0.6rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  animation: slide-down 140ms ease-out;
-}
-
-@keyframes slide-down {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.editor label {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-.editor label .hint { color: var(--text-muted); font-weight: normal; opacity: 0.7; }
-
-.editor input {
-  padding: 0.3rem 0.5rem;
-  background: var(--surface-strong);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text);
-  font-size: 0.82rem;
-}
-.editor input:focus { outline: none; border-color: var(--border-strong); }
-
-.root-row { display: flex; gap: 4px; }
-.root-row input { flex: 1; }
-.root-row .pick-btn {
-  width: 30px;
-  background: var(--surface-strong);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-}
-.root-row .pick-btn:hover { background: var(--accent-soft); color: var(--text); }
-
-.editor-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 2px;
-  align-items: center;
-}
-.spacer { flex: 1; }
-
-.editor-actions button {
-  padding: 0.3rem 0.7rem;
-  font-size: 0.78rem;
-  border-radius: 5px;
-  cursor: pointer;
-  border: 1px solid var(--border);
-  background: var(--surface-strong);
-  color: var(--text);
-}
-.editor-actions button:hover { background: var(--accent-soft); }
-.editor-actions button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
-.editor-actions button.primary:hover { opacity: 0.9; }
-.editor-actions button.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); }
-.editor-actions button.danger:hover { background: rgba(239,68,68,0.1); }
-.editor-actions button.ghost { background: transparent; }
-.editor-actions button:disabled { opacity: 0.5; cursor: default; }
+/* The "..." button is both a settings shortcut and the source drag handle.
+   Grab cursor advertises the drag affordance; a plain click still opens
+   settings because HTML5 distinguishes click from drag for us. */
+.icon-btn.drag-handle { cursor: grab; }
+.icon-btn.drag-handle:active { cursor: grabbing; }
 
 .error {
   color: #ef4444;
   font-size: 0.75rem;
   margin: 0;
+  padding: 0.35rem 0.75rem;
+  background: rgba(239, 68, 68, 0.08);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+  cursor: pointer;
 }
 
 .rows {

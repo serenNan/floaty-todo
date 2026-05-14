@@ -35,6 +35,8 @@ export const api = {
       label: args.label ?? null,
       projectRoot: args.projectRoot ?? null,
     }),
+  reorderSources: (orderedIds: string[]) =>
+    invoke<void>('reorder_sources', { orderedIds }),
   setDefaultSource: (sourceId: string | null) =>
     invoke<void>('set_default_source', { sourceId }),
   setFileLabel: (filePath: string, label: string | null) =>

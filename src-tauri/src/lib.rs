@@ -166,6 +166,7 @@ pub fn run() {
             commands::add_source,
             commands::remove_source,
             commands::update_source,
+            commands::reorder_sources,
             commands::set_default_source,
             commands::set_file_label,
             commands::open_in_vscode,

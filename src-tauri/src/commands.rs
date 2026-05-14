@@ -258,6 +258,31 @@ pub fn update_source(
     Ok(updated)
 }
 
+/// Replace the source ordering with the given full list of ids.
+/// All current source ids must appear in `ordered_ids` — partial reorders
+/// are rejected so a stale frontend can't accidentally drop sources.
+#[tauri::command]
+pub fn reorder_sources(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    ordered_ids: Vec<String>,
+) -> Result<()> {
+    let mut cfg = state.config.write().unwrap();
+    let index_of = |id: &str| ordered_ids.iter().position(|x| x == id);
+    if cfg.sources.iter().any(|s| index_of(&s.id).is_none())
+        || ordered_ids.len() != cfg.sources.len()
+    {
+        return Err(AppError::CommandFailed(
+            "reorder list does not match current sources".into(),
+        ));
+    }
+    cfg.sources.sort_by_key(|s| index_of(&s.id).unwrap());
+    config::save_to(&state.config_path, &cfg)?;
+    drop(cfg);
+    let _ = app.emit("sources-changed", ());
+    Ok(())
+}
+
 #[tauri::command]
 pub fn set_default_source(
     state: State<'_, AppState>,

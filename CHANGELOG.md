@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-05-14 add Vue UI (EmptyState, TaskItem, TaskList, dark-mode CSS)
+
+- `src/components/EmptyState.vue`: vault picker landing screen; calls `settings.pickAndSetVault()` then `tasks.refresh()`
+- `src/components/TaskItem.vue`: single task row with checkbox, indent-aware padding, strikethrough-on-done styling
+- `src/components/TaskList.vue`: full list view — add-task form, loading/error/empty states, footer counter, refresh button
+- `src/App.vue`: rewired `onMounted` to load settings, conditionally refresh tasks if vault set, and subscribe to `tasks-updated` event; `onUnmounted` cleans up listener; routes between `EmptyState` and `TaskList` via `hasVault` computed
+- `src/styles/main.css`: CSS variable tokens (`--bg`, `--bg-hover`, `--fg`, `--fg-muted`, `--border`) with automatic dark-mode override via `prefers-color-scheme: dark`
+- Scaffold cleanup: deleted `src/assets/vue.svg` (no longer referenced)
+
 ## 2026-05-14 add frontend service layer (types, tauri-api, Pinia stores)
 
 - `src/types/task.ts`: `Task` and `AppConfig` TypeScript interfaces mirroring Rust structs

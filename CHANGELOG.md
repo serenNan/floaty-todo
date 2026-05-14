@@ -1,5 +1,15 @@
 # 变更日志
 
+## 2026-05-15 default window width 380 → 760, project gets its own TODO.md
+
+- `src-tauri/tauri.conf.json`: window initial width 380 → 760 (height
+  unchanged at 600); `minWidth` stays 320 so the user can still shrink
+- `TODO.md` (new): project's own backlog in the same `- [ ]` format
+  Floaty Todo itself parses, so adding the project as a File source
+  immediately makes the app eat its own dog food. Groups items by
+  priority (now / v0.3 / v1.0 / v2.0), known small papercuts, and the
+  things we've decided not to do (PLAN.md non-goals echoed here)
+
 ## 2026-05-15 collapse-all, full-header click, drag-to-reorder actions, reveal-in-explorer
 
 Four UX rough-edges polished in one pass:

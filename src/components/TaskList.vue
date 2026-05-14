@@ -120,14 +120,18 @@ async function submit() {
 .add-row input::placeholder { color: var(--text-muted); }
 
 .source-select {
-  max-width: 95px;
-  padding: 0.4rem 0.3rem;
+  /* No fixed max-width — let the control size to its longest option
+     so labels like "★ WishTalk" don't get clipped. We cap at 45% of
+     the row width to keep some room for the input. */
+  max-width: 45%;
+  padding: 0.4rem 0.4rem;
   background: var(--surface-strong);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text);
   font-size: 0.78rem;
   cursor: pointer;
+  text-overflow: ellipsis;
 }
 
 .add-row button {

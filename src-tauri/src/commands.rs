@@ -121,11 +121,28 @@ pub fn add_source(
         }
     }
 
+    // Default label from project root's folder name — matches what "Open in
+    // VS Code" / "Open terminal" will jump to, so the source label and the
+    // shell-action target stay consistent. For a Folder source that's the
+    // folder name; for a File source it's the parent folder name.
+    let resolved_label = label.filter(|l| !l.trim().is_empty()).or_else(|| {
+        let root_for_label = project_root.clone().unwrap_or_else(|| match kind {
+            SourceKind::Folder => canonical.clone(),
+            SourceKind::File => canonical
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| canonical.clone()),
+        });
+        root_for_label
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+    });
+
     let source = Source {
         id: id.clone(),
         path: canonical,
         kind,
-        label,
+        label: resolved_label,
         project_root,
     };
 
@@ -271,6 +288,13 @@ pub fn open_in_terminal(state: State<'_, AppState>, source_id: String) -> Result
     let source = find_source_by_id(&state, &source_id)?;
     let target = source.effective_project_root();
     crate::shell::open_terminal(&target)
+}
+
+/// Open an arbitrary URL with the OS default handler. Used by inline-markdown
+/// link rendering inside task text — the WebView can't navigate externally.
+#[tauri::command]
+pub fn open_url(url: String) -> Result<()> {
+    crate::shell::open_url(&url)
 }
 
 #[tauri::command]

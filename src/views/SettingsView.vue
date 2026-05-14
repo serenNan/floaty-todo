@@ -5,6 +5,7 @@ import { useSettingsStore } from '../stores/settings';
 import { useTheme } from '../composables/useTheme';
 import { setLocale, SUPPORTED_LOCALES, type Locale } from '../i18n';
 import { api } from '../services/tauri-api';
+import { confirm } from '../composables/useConfirm';
 import type { Source } from '../types/task';
 
 defineEmits<{ back: [] }>();
@@ -79,7 +80,13 @@ async function setDefault(s: Source) {
 }
 
 async function removeSource(s: Source) {
-  if (!confirm(t('source.removeConfirm', { label: displayLabel(s) }))) return;
+  const ok = await confirm({
+    title: t('confirm.removeSourceTitle'),
+    message: t('confirm.removeSourceMessage', { label: displayLabel(s) }),
+    confirmText: t('confirm.removeSourceConfirm'),
+    danger: true,
+  });
+  if (!ok) return;
   try {
     await settings.removeSource(s.id);
     if (editingId.value === s.id) editingId.value = null;

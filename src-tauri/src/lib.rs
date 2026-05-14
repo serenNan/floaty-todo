@@ -160,6 +160,7 @@ pub fn run() {
             commands::set_file_label,
             commands::open_in_vscode,
             commands::open_in_terminal,
+            commands::open_url,
             commands::show_window,
             commands::hide_window,
         ])

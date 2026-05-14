@@ -8,6 +8,33 @@ use crate::error::{AppError, Result};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+/// Open a URL with the OS default handler (browser for http/https,
+/// mail client for mailto:, etc.). Cheap to invoke and detached from us.
+pub fn open_url(url: &str) -> Result<()> {
+    // Reject control characters / newlines defensively — task text comes from
+    // user-edited markdown, and an embedded newline would let a bad URL split
+    // into a second shell argument on some platforms.
+    if url.chars().any(|c| c == '\n' || c == '\r' || c == '\0') {
+        return Err(AppError::CommandFailed("URL contains invalid characters".into()));
+    }
+    let mut cmd = if cfg!(windows) {
+        // `cmd /c start "" <url>` — the empty quoted string is the (unused)
+        // window title; without it cmd treats a quoted URL as the title.
+        let mut c = Command::new("cmd");
+        c.args(["/c", "start", "", url]);
+        c
+    } else if cfg!(target_os = "macos") {
+        let mut c = Command::new("open");
+        c.arg(url);
+        c
+    } else {
+        let mut c = Command::new("xdg-open");
+        c.arg(url);
+        c
+    };
+    spawn_detached(&mut cmd).map_err(|e| AppError::CommandFailed(format!("open_url: {e}")))
+}
+
 /// Spawn `code <path>`. Windows uses `code.cmd` (shim); other platforms use `code`.
 pub fn open_vscode(path: &Path) -> Result<()> {
     let bin = if cfg!(windows) { "code.cmd" } else { "code" };

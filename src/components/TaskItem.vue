@@ -1,15 +1,40 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
+import { api } from '../services/tauri-api';
+import { parseInline } from '../utils/inline-md';
 
-defineProps<{ task: Task }>();
+const props = defineProps<{ task: Task }>();
 const tasks = useTaskStore();
+
+const segments = computed(() => parseInline(props.task.text));
+
+async function openLink(href: string) {
+  try { await api.openUrl(href); }
+  catch (e) { console.warn('openUrl failed:', e); }
+}
 </script>
 
 <template>
   <label class="row" :class="{ done: task.completed }" :style="{ paddingLeft: 8 + task.indent * 12 + 'px' }">
     <input type="checkbox" :checked="task.completed" @change="tasks.toggle(task.id)" />
-    <span class="text">{{ task.text }}</span>
+    <span class="text">
+      <template v-for="(seg, i) in segments" :key="i">
+        <code v-if="seg.type === 'code'" class="md-code">{{ seg.text }}</code>
+        <strong v-else-if="seg.type === 'bold'">{{ seg.text }}</strong>
+        <em v-else-if="seg.type === 'italic'">{{ seg.text }}</em>
+        <s v-else-if="seg.type === 'strike'">{{ seg.text }}</s>
+        <a
+          v-else-if="seg.type === 'link'"
+          class="md-link"
+          :href="seg.href"
+          :title="seg.href"
+          @click.prevent.stop="openLink(seg.href)"
+        >{{ seg.text }}</a>
+        <template v-else>{{ seg.text }}</template>
+      </template>
+    </span>
   </label>
 </template>
 
@@ -21,7 +46,7 @@ const tasks = useTaskStore();
 
 .row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0.38rem 0.75rem;
   cursor: pointer;
@@ -48,6 +73,30 @@ const tasks = useTaskStore();
   color: var(--text);
   font-size: 0.875rem;
   line-height: 1.4;
+  word-break: break-word;
+}
+
+.text strong { font-weight: 600; color: var(--text); }
+.text em { font-style: italic; }
+.text s { color: var(--text-muted); }
+.text .md-code {
+  font-family: 'Cascadia Code', 'Consolas', 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.82em;
+  padding: 1px 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.text .md-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.text .md-link:hover {
+  text-decoration-color: var(--accent);
 }
 
 input[type="checkbox"] {
@@ -59,5 +108,6 @@ input[type="checkbox"] {
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: 3px;
+  margin-top: 3px;
 }
 </style>

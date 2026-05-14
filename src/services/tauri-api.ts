@@ -42,6 +42,7 @@ export const api = {
 
   openInVscode: (sourceId: string) => invoke<void>('open_in_vscode', { sourceId }),
   openInTerminal: (sourceId: string) => invoke<void>('open_in_terminal', { sourceId }),
+  openUrl: (url: string) => invoke<void>('open_url', { url }),
 
   pickFolder: async (): Promise<string | null> => {
     const sel = await open({ directory: true, multiple: false });

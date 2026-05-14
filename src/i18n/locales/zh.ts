@@ -10,8 +10,8 @@ export default {
   },
   tasks: {
     loading: '加载中…',
-    addPlaceholder: '添加到 {target}…',
-    targetDefault: '默认（{label}）',
+    addPlaceholder: '新任务到 {target}…',
+    targetDefault: '★ {label}',
     todoCount: '{n} 待办',
     doneCount: '{n} 已完成',
     refresh: '刷新',
@@ -82,5 +82,13 @@ export default {
   },
   errors: {
     pickFailed: '无法选择该路径。',
+  },
+  confirm: {
+    defaultTitle: '确认操作',
+    ok: '确定',
+    cancel: '取消',
+    removeSourceTitle: '移除任务源',
+    removeSourceMessage: '不再在 Floaty Todo 中跟踪 "{label}"？磁盘上的文件不会被删除。',
+    removeSourceConfirm: '移除',
   },
 };

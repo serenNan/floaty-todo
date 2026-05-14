@@ -1,5 +1,56 @@
 # 变更日志
 
+## 2026-05-14 inline markdown rendering + in-app confirm + smarter default labels
+
+Three small UX polish items reported together:
+
+1. **Task text renders inline markdown** — `**bold**`, `*italic*`,
+   `` `code` ``, `~~strike~~`, and `[text](url)` are rendered as proper
+   elements instead of dumped as plain text. Links open via the OS default
+   handler.
+2. **Source delete now shows an in-app modal confirm** — replaces native
+   `window.confirm()` (which clashed with the floaty-window aesthetic and
+   was easy to miss). Single global `<ConfirmDialog>` mounted at the App
+   root, driven by a `confirm()` promise from `composables/useConfirm.ts`.
+3. **`add_source` infers a sensible default label** — uses the folder name
+   of the source's effective `project_root` (so a File source at
+   `D:\Projects\WishTalk\Todo.md` lands with label `WishTalk`, matching
+   where "Open in VS Code" / terminal will jump to).
+
+Also fixed the long-standing `default (WishTal…` truncation in the
+QuickAdd source dropdown.
+
+### Backend
+- `commands.rs::add_source`: resolves the default label from
+  `project_root`'s `file_name()` (Folder → folder name; File → parent
+  folder name); user-supplied non-empty label still wins
+- `shell.rs::open_url(url)`: cross-platform default-handler launcher
+  (Windows `cmd /c start "" <url>`, macOS `open <url>`, Linux `xdg-open`)
+  with control-character defence
+- `commands.rs::open_url(url)` + `lib.rs` `invoke_handler` registration
+
+### Frontend
+- `src/utils/inline-md.ts` (new): zero-dep inline parser → segment array
+  (`text` / `code` / `bold` / `italic` / `strike` / `link`); no `v-html`,
+  XSS-safe by construction
+- `src/components/TaskItem.vue`: maps segments to `<code>` / `<strong>` /
+  `<em>` / `<s>` / `<a>`; link click invokes `api.openUrl`
+- `src/composables/useConfirm.ts` (new): `confirm({ title, message,
+  confirmText, cancelText, danger }) → Promise<boolean>`; singleton state
+- `src/components/ConfirmDialog.vue` (new): Teleport-mounted modal with
+  backdrop click / Esc to cancel, focus-trap on confirm button, danger
+  variant for destructive actions; pop animation
+- `src/App.vue`: mounts `<ConfirmDialog />` at the root
+- `src/components/SourceGroup.vue` + `src/views/SettingsView.vue`:
+  replace `window.confirm` with the new `confirm()` API
+- `src/services/tauri-api.ts`: `openUrl(url)`
+- `src/components/TaskList.vue`: `source-select` CSS — drop the 95px cap;
+  cap at 45% of the row width and rely on the select control's native
+  sizing so long labels like `★ WishTalk` are no longer clipped
+- `src/i18n/locales/{en,zh}.ts`: `targetDefault` short-form (`★ {label}`),
+  shorter QuickAdd placeholder, `confirm.*` strings (title / ok / cancel /
+  removeSource{Title,Message,Confirm})
+
 ## 2026-05-14 per-file nested groups inside each source, with renameable labels
 
 Folder sources now split their tasks into one collapsible group per `.md`

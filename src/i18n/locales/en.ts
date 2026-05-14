@@ -10,8 +10,8 @@ export default {
   },
   tasks: {
     loading: 'Loading…',
-    addPlaceholder: 'Add to {target}…',
-    targetDefault: 'default ({label})',
+    addPlaceholder: 'New task in {target}…',
+    targetDefault: '★ {label}',
     todoCount: '{n} todo',
     doneCount: '{n} done',
     refresh: 'Refresh',
@@ -82,5 +82,13 @@ export default {
   },
   errors: {
     pickFailed: 'Could not pick that path.',
+  },
+  confirm: {
+    defaultTitle: 'Are you sure?',
+    ok: 'OK',
+    cancel: 'Cancel',
+    removeSourceTitle: 'Remove source',
+    removeSourceMessage: 'Stop tracking "{label}" in Floaty Todo? The files on disk are not touched.',
+    removeSourceConfirm: 'Remove',
   },
 };

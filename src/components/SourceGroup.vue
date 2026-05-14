@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import type { Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
+import { confirm } from '../composables/useConfirm';
 import FileGroup from './FileGroup.vue';
 
 const props = defineProps<{ source: Source; tasks: Task[] }>();
@@ -88,7 +89,13 @@ async function setDefault() {
 }
 
 async function removeSource() {
-  if (!confirm(t('source.removeConfirm', { label: displayLabel.value }))) return;
+  const ok = await confirm({
+    title: t('confirm.removeSourceTitle'),
+    message: t('confirm.removeSourceMessage', { label: displayLabel.value }),
+    confirmText: t('confirm.removeSourceConfirm'),
+    danger: true,
+  });
+  if (!ok) return;
   try { await settings.removeSource(props.source.id); }
   catch (e: any) { actionError.value = String(e); }
 }

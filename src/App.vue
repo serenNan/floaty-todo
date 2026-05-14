@@ -7,6 +7,7 @@ import { api } from './services/tauri-api';
 import EmptyState from './components/EmptyState.vue';
 import TaskList from './components/TaskList.vue';
 import SettingsView from './views/SettingsView.vue';
+import ConfirmDialog from './components/ConfirmDialog.vue';
 
 type View = 'tasks' | 'settings';
 
@@ -59,6 +60,7 @@ function backToTasks() { view.value = 'tasks'; }
         />
       </Transition>
     </div>
+    <ConfirmDialog />
   </main>
 </template>
 

@@ -128,6 +128,7 @@ mod tests {
             file_labels: HashMap::new(),
             enabled_quick_actions: crate::types::default_quick_actions(),
             hub_folder: None,
+            auto_create_quadrant_headers: true,
         };
         save_to(&p, &cfg).unwrap();
 

@@ -47,6 +47,8 @@ pub enum QuickActionKind {
     Reveal,
 }
 
+fn default_true() -> bool { true }
+
 /// Defaults shipped to brand-new users — Reveal + VS Code + terminal.
 /// User toggles them in Settings → Quick actions.
 pub fn default_quick_actions() -> Vec<QuickActionKind> {
@@ -134,6 +136,8 @@ pub struct AppConfig {
     /// of crawling each repo individually.
     #[serde(default)]
     pub hub_folder: Option<PathBuf>,
+    #[serde(default = "default_true")]
+    pub auto_create_quadrant_headers: bool,
 }
 
 impl Default for AppConfig {
@@ -146,6 +150,7 @@ impl Default for AppConfig {
             file_labels: HashMap::new(),
             enabled_quick_actions: default_quick_actions(),
             hub_folder: None,
+            auto_create_quadrant_headers: true,
         }
     }
 }
@@ -199,5 +204,18 @@ mod tests {
         let json = r#"{"id":"a","text":"hi","completed":false,"source_file":"/x.md","line_number":1,"indent":0,"source_id":"s"}"#;
         let t: Task = serde_json::from_str(json).unwrap();
         assert!(t.quadrant.is_none());
+    }
+
+    #[test]
+    fn config_defaults_auto_create_headers_to_true() {
+        let c = AppConfig::default();
+        assert!(c.auto_create_quadrant_headers);
+    }
+
+    #[test]
+    fn config_deserializes_missing_auto_create_as_true() {
+        let json = r#"{"sources":[],"inbox_file":"inbox.md","always_on_top":true}"#;
+        let c: AppConfig = serde_json::from_str(json).unwrap();
+        assert!(c.auto_create_quadrant_headers);
     }
 }

@@ -1,5 +1,15 @@
 # 变更日志
 
+## 2026-05-14 add registry (task index + ignore list)
+
+- `TaskRegistry` holds `HashMap<id, Task>` + `HashMap<PathBuf, Vec<id>>` for per-file invalidation
+- `rebuild_from_vault` walks vault via `walkdir`, skips non-markdown and ignored paths
+- `refresh_file` removes stale entries then re-parses; handles deleted files via `best_effort_canonical` (parent-dir canonicalize + filename fallback, fixes Windows `\\?\` key mismatch)
+- `is_markdown_target` / `is_not_ignored` are `pub` for reuse by Task 7 watcher
+- Ignore list: `.obsidian`, `.git`, `.trash`, `node_modules`, `~`-prefix/suffix, `.swp`, `.tmp`
+- 4 unit tests pass: vault scan, dir filtering, file refresh, deletion handling
+- `pub mod registry;` added to `lib.rs`
+
 ## 2026-05-14 add persistent config (config.rs)
 
 - `load_from` returns `AppConfig::default()` for missing or corrupt JSON (bricking prevention)

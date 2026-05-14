@@ -1,6 +1,7 @@
 mod config;
 mod error;
 mod parser;
+pub mod registry;
 mod storage;
 mod types;
 

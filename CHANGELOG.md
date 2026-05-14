@@ -1,5 +1,18 @@
 # 变更日志
 
+## 2026-05-15 reveal-action icon: chunky filled folder (was outline + magnifier)
+
+The outlined folder + magnifier overlay looked busy at 14 px and read
+more like "search" than "open in file manager". Replace with a single
+filled folder with a soft white top-edge highlight — cleaner silhouette,
+keeps the existing yellow brand colour, and the action is now visually
+honest ("just open the folder").
+
+- `src/components/icons/QuickActionIcon.vue`: rewrite the `reveal` SVG —
+  one fill path for the folder body + a 35%-opacity white stroke line
+  just under the rim for the fold-edge cue; dropped the magnifier
+  `<circle>` and `<line>` elements
+
 ## 2026-05-15 default window width 380 → 760, project gets its own TODO.md
 
 - `src-tauri/tauri.conf.json`: window initial width 380 → 760 (height

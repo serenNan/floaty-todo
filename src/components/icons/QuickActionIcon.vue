@@ -86,32 +86,24 @@ defineProps<{ kind: QuickActionKind }>();
     aria-hidden="true"
   >
     <!--
-      "Reveal in file manager" — open folder with a magnifier inside.
-      Reads as "look inside this folder" at 14px without being literal.
+      Chunky filled folder with a soft top-edge highlight — reads as a
+      cartoon manila folder at 14px. Dropped the magnifier overlay: the
+      icon-only style is more honest about the action being
+      "open in file manager", and visually less cluttered.
     -->
     <path
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linejoin="round"
-      d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      fill="currentColor"
+      d="M2.5 7.6c0-1.1 0.9-2 2-2h4.6c0.5 0 1 0.2 1.4 0.6l1.3 1.3c0.4 0.4 0.9 0.6 1.4 0.6h6.3c1.1 0 2 0.9 2 2v8.3c0 1.1-0.9 2-2 2H4.5c-1.1 0-2-0.9-2-2V7.6z"
     />
-    <circle
-      cx="13"
-      cy="14"
-      r="2.4"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-    />
-    <line
-      x1="14.9"
-      y1="15.9"
-      x2="17.2"
-      y2="18.2"
-      stroke="currentColor"
-      stroke-width="1.8"
+    <!-- Top-edge highlight: a thin pale line just below the rim to imply
+         the front panel folding forward. -->
+    <path
+      stroke="white"
+      stroke-opacity="0.35"
+      stroke-width="1.2"
       stroke-linecap="round"
+      fill="none"
+      d="M3.6 9.8h16.8"
     />
   </svg>
 </template>

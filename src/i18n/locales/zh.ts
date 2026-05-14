@@ -61,6 +61,13 @@ export default {
     },
     removeConfirm: '确定要移除源 "{label}" 吗？\n此操作只在 Floaty Todo 内部忘记它——不会改动任何文件。',
   },
+  quadrant: {
+    urgent_important: '紧急+重要',
+    not_urgent_important: '重要不紧急',
+    urgent_not_important: '紧急不重要',
+    not_urgent_not_important: '不紧急不重要',
+    unsorted: '未分类',
+  },
   settings: {
     title: '设置',
     back: '返回',
@@ -107,6 +114,9 @@ export default {
     about: {
       tagline: '一款浮窗式、文件优先的待办聚合器。',
     },
+    auto_create_quadrant_headers: '自动创建象限标题',
+    auto_create_quadrant_headers_help:
+      '向一个不存在的象限添加任务时，自动追加 `## 🔴 紧急+重要` 等标题。',
   },
   errors: {
     pickFailed: '无法选择该路径。',

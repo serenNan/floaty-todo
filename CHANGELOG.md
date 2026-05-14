@@ -1,5 +1,26 @@
 # 变更日志
 
+## 2026-05-14 pin / unpin always-on-top toggle in TaskList footer
+
+The app shipped with always-on-top permanently on. Users who want to
+focus on another window without dragging Floaty out of the way can now
+toggle it from the footer.
+
+- `src-tauri/src/commands.rs`: new `set_always_on_top(on: bool)`
+  command — writes the flag back to config + calls
+  `window.set_always_on_top(on)` so the change takes effect immediately
+- `src-tauri/src/lib.rs`: setup now `set_always_on_top(cfg.always_on_top)`
+  on the main window after load, so the persisted flag wins over the
+  initial `tauri.conf.json` value on every launch
+- `src/services/tauri-api.ts`: `setAlwaysOnTop(on)`
+- `src/stores/settings.ts`: `alwaysOnTop` computed + `setAlwaysOnTop` /
+  `toggleAlwaysOnTop` helpers
+- `src/components/TaskList.vue`: footer drops in a 28px pin button
+  between the counts and the ↻ refresh; inline SVG drawing-pin with two
+  states — filled accent colour when pinned, outlined-and-tilted when
+  floating
+- `src/i18n/locales/{en,zh}.ts`: `window.pin` / `window.unpin` titles
+
 ## 2026-05-14 brand-coloured SVG icons for quick actions
 
 Replaces the placeholder Unicode glyphs (⎘ / ▷ / ◆) on quick-action

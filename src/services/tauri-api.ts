@@ -48,6 +48,7 @@ export const api = {
   setEnabledQuickActions: (actions: QuickActionKind[]) =>
     invoke<void>('set_enabled_quick_actions', { actions }),
   openUrl: (url: string) => invoke<void>('open_url', { url }),
+  setAlwaysOnTop: (on: boolean) => invoke<void>('set_always_on_top', { on }),
 
   pickFolder: async (): Promise<string | null> => {
     const sel = await open({ directory: true, multiple: false });

@@ -90,6 +90,10 @@ export default {
   errors: {
     pickFailed: 'Could not pick that path.',
   },
+  window: {
+    pin: 'Pin window on top',
+    unpin: 'Unpin (allow other windows above)',
+  },
   confirm: {
     defaultTitle: 'Are you sure?',
     ok: 'OK',

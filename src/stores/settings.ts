@@ -13,6 +13,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const enabledQuickActions = computed<QuickActionKind[]>(
     () => config.value?.enabled_quick_actions ?? [],
   );
+  const alwaysOnTop = computed<boolean>(() => config.value?.always_on_top ?? true);
   /// Source ids currently being scanned by the backend. UI shows a spinner /
   /// disables actions for those sources. Track-by-id to avoid blocking
   /// unrelated sources when one is scanning.
@@ -80,6 +81,14 @@ export const useSettingsStore = defineStore('settings', () => {
     await load();
   }
 
+  async function setAlwaysOnTop(on: boolean) {
+    await api.setAlwaysOnTop(on);
+    await load();
+  }
+  async function toggleAlwaysOnTop() {
+    await setAlwaysOnTop(!alwaysOnTop.value);
+  }
+
   /// Convenience: open the folder picker, then add the chosen path as a Folder source.
   async function pickAndAddFolder(): Promise<Source | null> {
     const path = await api.pickFolder();
@@ -102,6 +111,7 @@ export const useSettingsStore = defineStore('settings', () => {
     fileLabels,
     fileLabel,
     enabledQuickActions,
+    alwaysOnTop,
     scanningSourceIds,
     isScanning,
     markScanning,
@@ -112,6 +122,8 @@ export const useSettingsStore = defineStore('settings', () => {
     setDefaultSource,
     setFileLabel,
     setEnabledQuickActions,
+    setAlwaysOnTop,
+    toggleAlwaysOnTop,
     pickAndAddFolder,
     pickAndAddFile,
   };

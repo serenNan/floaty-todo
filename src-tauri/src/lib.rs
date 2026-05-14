@@ -139,8 +139,11 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Intercept window close → hide to tray.
+            // Intercept window close → hide to tray, and sync always-on-top
+            // from the persisted config (tauri.conf.json gives an initial
+            // value, but the user may have toggled it off on the previous run).
             if let Some(w) = app.get_webview_window("main") {
+                let _ = w.set_always_on_top(cfg.always_on_top);
                 let w_clone = w.clone();
                 w.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -170,6 +173,7 @@ pub fn run() {
             commands::run_quick_action,
             commands::set_enabled_quick_actions,
             commands::open_url,
+            commands::set_always_on_top,
             commands::show_window,
             commands::hide_window,
         ])

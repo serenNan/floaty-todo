@@ -90,6 +90,10 @@ export default {
   errors: {
     pickFailed: '无法选择该路径。',
   },
+  window: {
+    pin: '钉住窗口（始终置顶）',
+    unpin: '取消置顶（允许其他窗口覆盖）',
+  },
   confirm: {
     defaultTitle: '确认操作',
     ok: '确定',

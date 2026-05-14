@@ -340,6 +340,26 @@ pub fn open_url(url: String) -> Result<()> {
     crate::shell::open_url(&url)
 }
 
+/// Toggle the main window's always-on-top behaviour and persist the
+/// choice. Applies immediately so the user sees the change without
+/// having to restart.
+#[tauri::command]
+pub fn set_always_on_top(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    on: bool,
+) -> Result<()> {
+    {
+        let mut cfg = state.config.write().unwrap();
+        cfg.always_on_top = on;
+        config::save_to(&state.config_path, &cfg)?;
+    }
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.set_always_on_top(on);
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn show_window(app: AppHandle) -> Result<()> {
     if let Some(w) = app.get_webview_window("main") {

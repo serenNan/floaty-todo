@@ -79,6 +79,29 @@ async function submit() {
         {{ t('tasks.todoCount', { n: totals.todo }) }} · {{ t('tasks.doneCount', { n: totals.done }) }}
       </span>
       <span class="spacer"></span>
+      <button
+        class="footer-btn pin-btn"
+        :class="{ active: settings.alwaysOnTop }"
+        @click="settings.toggleAlwaysOnTop"
+        :title="settings.alwaysOnTop ? t('window.unpin') : t('window.pin')"
+      >
+        <!-- Drawing-pin glyph in two states: filled (pinned, accent colour)
+             vs outline-tilted (floating). Inline SVG keeps the style on
+             brand with the other icons. -->
+        <svg v-if="settings.alwaysOnTop" viewBox="0 0 24 24" class="pin-icon" aria-hidden="true">
+          <path fill="currentColor" d="M14 4l6 6-3 3-1.5-1.5-3.5 3.5V21h-2v-5.5L7 19l-3-3 3.5-3.5L6 11l3-3 5-4z" transform="rotate(-15 12 12)"/>
+        </svg>
+        <svg v-else viewBox="0 0 24 24" class="pin-icon" aria-hidden="true">
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linejoin="round"
+            d="M14 4l6 6-3 3-1.5-1.5-3.5 3.5V21h-2v-5.5L7 19l-3-3 3.5-3.5L6 11l3-3 5-4z"
+            transform="rotate(-15 12 12)"
+          />
+        </svg>
+      </button>
       <button class="footer-btn" @click="tasks.refresh" :title="t('tasks.refreshTitle')">↻</button>
     </div>
   </div>
@@ -202,5 +225,26 @@ async function submit() {
   width: 28px;
   padding: 0.2rem 0;
   text-align: center;
+}
+
+.pin-btn {
+  width: 28px;
+  padding: 0.2rem 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin-btn .pin-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+.pin-btn.active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: var(--accent-soft);
+}
+.pin-btn.active:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 </style>

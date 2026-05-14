@@ -32,7 +32,5 @@ thiserror = "1.0"
 tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros"] }
 tauri-plugin-dialog = "2"
 hex = "0.4"
-
-[dev-dependencies]
 tempfile = "3.10"
 

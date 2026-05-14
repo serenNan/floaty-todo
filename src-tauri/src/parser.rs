@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::types::{hash_content, Task};
+use crate::types::{hash_content, Quadrant, Task};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::path::Path;
@@ -7,6 +7,20 @@ use std::path::Path;
 static TASK_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(\s*)[-*+]\s+\[([ xX])\]\s+(.+?)\s*$").unwrap()
 });
+
+static HEADER_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s{0,3}(#{1,6})\s+(.+?)\s*$").unwrap()
+});
+
+/// Probe a header's text for a quadrant emoji. Priority order
+/// 🔴 → 🟡 → 🟠 → 🟢 makes mixed-emoji headers deterministic.
+fn detect_quadrant(header_text: &str) -> Option<Quadrant> {
+    if header_text.contains('\u{1F534}') { return Some(Quadrant::UrgentImportant); }
+    if header_text.contains('\u{1F7E1}') { return Some(Quadrant::NotUrgentImportant); }
+    if header_text.contains('\u{1F7E0}') { return Some(Quadrant::UrgentNotImportant); }
+    if header_text.contains('\u{1F7E2}') { return Some(Quadrant::NotUrgentNotImportant); }
+    None
+}
 
 pub struct ParsedTask {
     pub indent: usize,
@@ -25,14 +39,21 @@ pub fn parse_line(line: &str) -> Option<ParsedTask> {
 
 pub fn parse_file(path: &Path, source_id: &str) -> Result<Vec<Task>> {
     let raw = std::fs::read(path)?;
-    // Strip UTF-8 BOM if present
     let content = if raw.starts_with(&[0xEF, 0xBB, 0xBF]) { &raw[3..] } else { &raw[..] };
     let text = String::from_utf8_lossy(content);
 
     let abs = dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
     let mut tasks = Vec::new();
+    let mut current_quadrant: Option<Quadrant> = None;
+
     for (i, line) in text.lines().enumerate() {
         let line_number = i + 1;
+        if let Some(h) = HEADER_REGEX.captures(line) {
+            if let Some(q) = detect_quadrant(h.get(2).unwrap().as_str()) {
+                current_quadrant = Some(q);
+            }
+            continue;
+        }
         if let Some(p) = parse_line(line) {
             let id_input = format!("{}:{}", abs.display(), line_number);
             let id = hex::encode(&hash_content(id_input.as_bytes())[..8]);
@@ -44,7 +65,7 @@ pub fn parse_file(path: &Path, source_id: &str) -> Result<Vec<Task>> {
                 line_number,
                 indent: p.indent,
                 source_id: source_id.to_string(),
-                quadrant: None,
+                quadrant: current_quadrant,
             });
         }
     }
@@ -146,5 +167,59 @@ mod tests {
         let f = write_tmp("- [ ] x\n");
         let tasks = parse_file(f.path(), "my-source").unwrap();
         assert_eq!(tasks[0].source_id, "my-source");
+    }
+
+    #[test]
+    fn parse_file_assigns_quadrant_from_header() {
+        let f = write_tmp("## 🔴 Urgent+Important\n- [ ] a\n## 🟡 Important\n- [ ] b\n");
+        let tasks = parse_file(f.path(), "s").unwrap();
+        assert_eq!(tasks[0].quadrant, Some(crate::types::Quadrant::UrgentImportant));
+        assert_eq!(tasks[1].quadrant, Some(crate::types::Quadrant::NotUrgentImportant));
+    }
+
+    #[test]
+    fn parse_file_child_header_inherits_parent_quadrant() {
+        let f = write_tmp("## 🔴 X\n### sub\n- [ ] a\n");
+        let tasks = parse_file(f.path(), "s").unwrap();
+        assert_eq!(tasks[0].quadrant, Some(crate::types::Quadrant::UrgentImportant));
+    }
+
+    #[test]
+    fn parse_file_task_before_any_header_is_none() {
+        let f = write_tmp("- [ ] a\n## 🔴 X\n- [ ] b\n");
+        let tasks = parse_file(f.path(), "s").unwrap();
+        assert_eq!(tasks[0].quadrant, None);
+        assert_eq!(tasks[1].quadrant, Some(crate::types::Quadrant::UrgentImportant));
+    }
+
+    #[test]
+    fn parse_file_multiple_same_quadrant_headers_merge() {
+        let f = write_tmp("## 🔴 a\n- [ ] one\n## 🟡 b\n- [ ] two\n## 🔴 c\n- [ ] three\n");
+        let tasks = parse_file(f.path(), "s").unwrap();
+        assert_eq!(tasks[0].quadrant, Some(crate::types::Quadrant::UrgentImportant));
+        assert_eq!(tasks[1].quadrant, Some(crate::types::Quadrant::NotUrgentImportant));
+        assert_eq!(tasks[2].quadrant, Some(crate::types::Quadrant::UrgentImportant));
+    }
+
+    #[test]
+    fn parse_file_recognises_any_header_level() {
+        let f = write_tmp("# 🔴 H1\n- [ ] a\n###### 🟢 H6\n- [ ] b\n");
+        let tasks = parse_file(f.path(), "s").unwrap();
+        assert_eq!(tasks[0].quadrant, Some(crate::types::Quadrant::UrgentImportant));
+        assert_eq!(tasks[1].quadrant, Some(crate::types::Quadrant::NotUrgentNotImportant));
+    }
+
+    #[test]
+    fn parse_file_emoji_anywhere_in_header_text() {
+        let f = write_tmp("## Today 🔴 urgent things\n- [ ] a\n");
+        let tasks = parse_file(f.path(), "s").unwrap();
+        assert_eq!(tasks[0].quadrant, Some(crate::types::Quadrant::UrgentImportant));
+    }
+
+    #[test]
+    fn parse_file_mixed_emoji_picks_red_first() {
+        let f = write_tmp("## 🟡 and 🔴 mixed\n- [ ] a\n");
+        let tasks = parse_file(f.path(), "s").unwrap();
+        assert_eq!(tasks[0].quadrant, Some(crate::types::Quadrant::UrgentImportant));
     }
 }

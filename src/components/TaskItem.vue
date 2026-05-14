@@ -23,12 +23,16 @@ async function openLink(href: string) {
 </script>
 
 <template>
-  <label class="row" :class="{ done: task.completed }" :style="{ paddingLeft: 8 + task.indent * 12 + 'px' }">
+  <!-- @click.self.prevent on the label catches clicks that land on the
+       label's own padding/gap whitespace (i.e. not on a child element) and
+       suppresses the implicit `<label>` → wrapped-input toggle that would
+       otherwise flip the checkbox. The `.self` modifier means clicks
+       bubbling up from .text or the checkbox aren't touched. Especially
+       relevant right after expanding a SourceGroup: the row's fadeIn
+       translateY animation means the user's pointer often lands in the
+       padding above where .text *will* be, hitting the label instead. -->
+  <label class="row" :class="{ done: task.completed }" :style="{ paddingLeft: 8 + task.indent * 12 + 'px' }" @click.self.prevent>
     <input type="checkbox" :checked="task.completed" @change="tasks.toggle(task.id)" />
-    <!-- @click.prevent.stop blocks the <label>'s default "toggle the
-         wrapped checkbox" behaviour, so clicking task text opens the
-         editor modal instead of flipping the checkbox. Inline link
-         clicks already use .prevent.stop so they keep priority. -->
     <span class="text" @click.prevent.stop="onTextClick">
       <template v-for="(seg, i) in segments" :key="i">
         <code v-if="seg.type === 'code'" class="md-code">{{ seg.text }}</code>

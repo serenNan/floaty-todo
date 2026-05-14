@@ -8,6 +8,9 @@ export interface Source {
   kind: SourceKind;
   label: string | null;
   project_root: string | null;
+  /// Optional accent hex (e.g. "#ef4444"). UI uses it as a left-edge stripe
+  /// and soft header tint. `null` = no tint.
+  color: string | null;
 }
 
 export interface Task {

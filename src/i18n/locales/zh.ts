@@ -50,6 +50,8 @@ export default {
       label: '名称',
       projectRoot: '项目根目录',
       projectRootHint: '（用于 VS Code / 终端）',
+      color: '颜色',
+      colorNone: '无颜色',
     },
     actions: {
       pickFolder: '选择文件夹…',

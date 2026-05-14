@@ -234,6 +234,7 @@ mod tests {
             kind: SourceKind::File,
             label: Some(label.to_string()),
             project_root: None,
+            color: None,
         }
     }
 

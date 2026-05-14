@@ -10,6 +10,7 @@ import QuickActionIcon from '../components/icons/QuickActionIcon.vue';
 import Icon from '../components/icons/Icon.vue';
 import type { IconName } from '../components/icons/Icon.vue';
 import type { QuickActionKind, Source } from '../types/task';
+import { SOURCE_COLORS, safeHexColor } from '../utils/colors';
 
 defineEmits<{ back: [] }>();
 
@@ -20,7 +21,9 @@ const { currentTheme, setTheme } = useTheme();
 const editingId = ref<string | null>(null);
 const labelDraft = ref('');
 const rootDraft = ref('');
+const colorDraft = ref<string | null>(null);
 const actionError = ref<string | null>(null);
+
 const hubError = ref<string | null>(null);
 const hubBusy = ref(false);
 
@@ -98,6 +101,7 @@ function startEdit(s: Source) {
   editingId.value = s.id;
   labelDraft.value = s.label ?? '';
   rootDraft.value = s.project_root ?? '';
+  colorDraft.value = s.color ?? null;
   actionError.value = null;
 }
 
@@ -112,6 +116,7 @@ async function saveEdit(s: Source) {
       sourceId: s.id,
       label: labelDraft.value.trim() || null,
       projectRoot: rootDraft.value.trim() || null,
+      color: colorDraft.value,
     });
     editingId.value = null;
   } catch (e: any) {
@@ -331,6 +336,34 @@ async function revealSource(s: Source) {
                 </button>
               </span>
             </label>
+            <div class="color-row">
+              <span class="color-label">{{ t('source.fields.color') }}</span>
+              <div class="swatches" role="radiogroup" :aria-label="t('source.fields.color')">
+                <button
+                  type="button"
+                  class="swatch none"
+                  :class="{ active: !colorDraft }"
+                  @click="colorDraft = null"
+                  :title="t('source.fields.colorNone')"
+                  role="radio"
+                  :aria-checked="!colorDraft"
+                >
+                  <Icon name="x" :size="11" />
+                </button>
+                <button
+                  v-for="c in SOURCE_COLORS"
+                  :key="c"
+                  type="button"
+                  class="swatch"
+                  :class="{ active: colorDraft === c }"
+                  :style="{ background: c }"
+                  @click="colorDraft = c"
+                  :title="c"
+                  role="radio"
+                  :aria-checked="colorDraft === c"
+                ></button>
+              </div>
+            </div>
             <div class="edit-actions">
               <button type="button" class="ghost" :disabled="defaultId === s.id" @click="setDefault(s)">
                 {{ defaultId === s.id ? t('source.actions.isDefault') : t('settings.sources.setDefault') }}
@@ -594,6 +627,49 @@ select {
   justify-content: center;
 }
 .root-row .pick-btn:hover { background: var(--accent-soft); color: var(--text); }
+
+.color-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.color-label { line-height: 1; }
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 100ms, border-color 100ms;
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--bg) inset, 0 0 0 3px var(--text);
+}
+.swatch.none {
+  background: var(--surface);
+  color: var(--text-muted);
+}
+.swatch.none.active {
+  background: var(--surface);
+  border-color: var(--text);
+  color: var(--text);
+}
 
 .edit-actions {
   display: flex;

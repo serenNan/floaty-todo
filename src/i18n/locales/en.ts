@@ -50,6 +50,8 @@ export default {
       label: 'Label',
       projectRoot: 'Project root',
       projectRootHint: '(for VS Code / terminal)',
+      color: 'Color',
+      colorNone: 'No color',
     },
     actions: {
       pickFolder: 'Pick folder…',

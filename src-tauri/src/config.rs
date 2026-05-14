@@ -82,6 +82,7 @@ mod tests {
             kind: SourceKind::Folder,
             label: Some("Vault".into()),
             project_root: None,
+            color: None,
         });
         cfg.default_source_id = Some(cfg.sources[0].id.clone());
         cfg.always_on_top = false;
@@ -119,6 +120,7 @@ mod tests {
                 kind: SourceKind::Folder,
                 label: None,
                 project_root: Some(verbatim.clone()),
+                color: None,
             }],
             default_source_id: Some(legacy_id.clone()),
             inbox_file: "inbox.md".into(),

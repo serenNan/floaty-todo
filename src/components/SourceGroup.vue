@@ -15,6 +15,7 @@ import FileGroup from './FileGroup.vue';
 import TaskItem from './TaskItem.vue';
 import QuickActionIcon from './icons/QuickActionIcon.vue';
 import Icon from './icons/Icon.vue';
+import { SOURCE_COLORS, safeHexColor } from '../utils/colors';
 
 /// Auto-collapse every FileGroup the first time we render a source whose
 /// task count exceeds this threshold. Keeps the DOM tree small enough to
@@ -31,6 +32,7 @@ const collapsed = ref(true);
 const editing = ref(false);
 const labelDraft = ref('');
 const rootDraft = ref('');
+const colorDraft = ref<string | null>(null);
 const actionError = ref<string | null>(null);
 
 // React to global "Collapse all" / "Expand all" from the footer button.
@@ -83,6 +85,7 @@ async function runAction(kind: QuickActionKind) {
 function startEdit() {
   labelDraft.value = props.source.label ?? '';
   rootDraft.value = props.source.project_root ?? '';
+  colorDraft.value = props.source.color ?? null;
   actionError.value = null;
   editing.value = true;
 }
@@ -98,6 +101,7 @@ async function saveEdit() {
       sourceId: props.source.id,
       label: labelDraft.value.trim() || null,
       projectRoot: rootDraft.value.trim() || null,
+      color: colorDraft.value,
     });
     editing.value = false;
   } catch (e: any) {
@@ -231,10 +235,26 @@ const kindEmoji = computed(() => {
   if (props.source.kind === 'folder') return collapsed.value ? '📁' : '📂';
   return collapsed.value ? '📄' : '📝';
 });
+
+// Source color comes from config; validate as hex so untrusted config can't
+// smuggle arbitrary CSS through inline style. While the inline editor is
+// open we preview the draft instead of the saved value so swatches feel
+// live — picking a color updates the card immediately, Save only persists.
+const safeColor = computed(() => {
+  const raw = editing.value ? colorDraft.value : props.source.color;
+  return safeHexColor(raw);
+});
+const colorStyle = computed(() =>
+  safeColor.value ? { '--src-color': safeColor.value } : undefined,
+);
 </script>
 
 <template>
-  <section class="group" :class="{ collapsed }">
+  <section
+    class="group"
+    :class="{ collapsed, colored: !!safeColor }"
+    :style="colorStyle"
+  >
     <header
       class="group-head"
       :class="{
@@ -329,6 +349,34 @@ const kindEmoji = computed(() => {
           </button>
         </span>
       </label>
+      <div class="color-row">
+        <span class="color-label">{{ t('source.fields.color') }}</span>
+        <div class="swatches" role="radiogroup" :aria-label="t('source.fields.color')">
+          <button
+            type="button"
+            class="swatch none"
+            :class="{ active: !colorDraft }"
+            @click="colorDraft = null"
+            :title="t('source.fields.colorNone')"
+            role="radio"
+            :aria-checked="!colorDraft"
+          >
+            <Icon name="x" :size="11" />
+          </button>
+          <button
+            v-for="c in SOURCE_COLORS"
+            :key="c"
+            type="button"
+            class="swatch"
+            :class="{ active: colorDraft === c }"
+            :style="{ background: c }"
+            @click="colorDraft = c"
+            :title="c"
+            role="radio"
+            :aria-checked="colorDraft === c"
+          ></button>
+        </div>
+      </div>
       <div class="editor-actions">
         <button type="button" class="ghost" :disabled="isDefault" @click="setDefault">
           {{ isDefault ? t('source.actions.isDefault') : t('source.actions.setDefault') }}
@@ -381,6 +429,22 @@ const kindEmoji = computed(() => {
 }
 .group:hover { border-color: var(--border-strong); }
 .group:last-child { margin-bottom: 0; }
+
+/* Colored variant: left-edge accent stripe via inset shadow (no layout
+   shift) + tinted header background. --src-color is bound by inline style. */
+.group.colored {
+  box-shadow: inset 4px 0 0 var(--src-color), var(--card-shadow);
+  border-color: color-mix(in srgb, var(--src-color) 30%, var(--border));
+}
+.group.colored:hover {
+  border-color: color-mix(in srgb, var(--src-color) 55%, var(--border-strong));
+}
+.group.colored .group-head {
+  background: color-mix(in srgb, var(--src-color) 10%, var(--surface-strong));
+}
+.group.colored .group-head:hover {
+  background: color-mix(in srgb, var(--src-color) 18%, var(--surface-strong));
+}
 
 .group-head {
   display: flex;
@@ -586,6 +650,49 @@ const kindEmoji = computed(() => {
   color: var(--text-muted);
 }
 .root-row .pick-btn:hover { background: var(--accent-soft); color: var(--text); }
+
+.color-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.color-label { line-height: 1; }
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 100ms, border-color 100ms;
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--bg) inset, 0 0 0 3px var(--text);
+}
+.swatch.none {
+  background: var(--surface);
+  color: var(--text-muted);
+}
+.swatch.none.active {
+  background: var(--surface);
+  border-color: var(--text);
+  color: var(--text);
+}
 
 .editor-actions {
   display: flex;

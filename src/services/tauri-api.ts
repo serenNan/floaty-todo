@@ -31,11 +31,13 @@ export const api = {
     sourceId: string;
     label?: string | null;
     projectRoot?: string | null;
+    color?: string | null;
   }) =>
     invoke<Source>('update_source', {
       sourceId: args.sourceId,
       label: args.label ?? null,
       projectRoot: args.projectRoot ?? null,
+      color: args.color ?? null,
     }),
   reorderSources: (orderedIds: string[]) =>
     invoke<void>('reorder_sources', { orderedIds }),

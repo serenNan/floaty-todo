@@ -61,6 +61,7 @@ export const useSettingsStore = defineStore('settings', () => {
     sourceId: string;
     label?: string | null;
     projectRoot?: string | null;
+    color?: string | null;
   }): Promise<Source> {
     const src = await api.updateSource(args);
     await load();

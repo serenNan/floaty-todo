@@ -34,7 +34,7 @@ src-tauri/        # Rust 后端
 - **Folder source** — 递归扫描 `path` 下所有 `.md`
 - **File source** — 单个 `.md` 文件（watcher 监听父目录，按文件名过滤）
 
-每个 `Source` 有 `id`（canonical 路径的 8 字节 hex sha256）、`path`、`kind`、可选 `label`、可选 `project_root`（被 `open_in_vscode` / `open_in_terminal` 使用；默认值：Folder → `path`，File → `path.parent()`）。
+每个 `Source` 有 `id`（canonical 路径的 8 字节 hex sha256）、`path`、`kind`、可选 `label`、可选 `project_root`（被 `open_in_vscode` / `open_in_terminal` 使用；默认值：Folder → `path`，File → `path.parent()`）、可选 `color`（hex `#xxx[xxx[xx]]`，Rust `update_source` 正则校验；UI 用作卡片左条 + header 色相）。
 
 任务通过 `Task.source_id` 关联到 source。registry 用 `(source_id, canonical_path)` 做键，所以同一个文件出现在两个 source 下也互相独立。
 
@@ -73,6 +73,7 @@ src-tauri/        # Rust 后端
 | `src/composables/useCollapse.ts` | 计数器风格的全局触发器 —— `collapseAll()` / `expandAll()` 自增 token；组件内 `bindCollapse(setter)` 监听这两个值，让 SourceGroup / FileGroup 翻转自身的 `collapsed` ref |
 | `src/components/ConfirmDialog.vue` | 由 `useConfirm` 驱动的 Teleport 模态；点遮罩 / Esc 取消，confirm 按钮 focus-trap，危险动作有红色变体 |
 | `src/utils/inline-md.ts` | 零依赖 inline-only Markdown 解析器 → `InlineSegment[]`（text / code / bold / italic / strike / link）；`TaskItem` 用它安全渲染任务文本，不走 v-html |
+| `src/utils/colors.ts` | source 强调色配套：`SOURCE_COLORS`（9 色 Tailwind-500 调色板）+ `safeHexColor(c)` hex 校验（与 Rust 端规则对齐，防止任意 CSS 注入） |
 | `src/views/SettingsView.vue` | 全屏设置页 —— 外观（主题分段控件）、语言（locale 下拉）、快捷动作（按类型开关）、Hub 目录（选择 / 重同步 / 更改 / 关闭）、Sources（卡片 + ⎘ / ▷ / 📝 / 🗑 + 内嵌编辑器）、关于；emit `back` |
 | `src/components/SourceGroup.vue` | 可折叠的单 source 组：点 header 任意处切换折叠；header 带 `data-source-id` 供拖拽目标识别。Header 含 caret + 类型 emoji（折叠时翻转）+ label + 默认徽章 + 扫描旋转图标 + 数量 + 可拖排序的品牌色 `QuickActionIcon` 按钮 + ⚙ 设置按钮（单击切换内嵌编辑器：label / project_root / set-default / remove）+ ⋮⋮ grip 拖拽手柄（**只做拖拽**，单击无动作；通过 `useSourceDrag` 重排 source）。Folder source 按 `source_file` 分桶渲染嵌套 `FileGroup`（任务数 > 50 时初始全部折叠）；File source 直接渲染 TaskItem。订阅 `useCollapse` 响应全局「Collapse all」 |
 | `src/components/icons/QuickActionIcon.vue` | 三个快捷动作的品牌色 inline SVG（VS Code / Terminal / Claude Code）；零依赖，适配深浅色 |

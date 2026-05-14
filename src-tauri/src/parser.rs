@@ -72,6 +72,14 @@ pub fn parse_file(path: &Path, source_id: &str) -> Result<Vec<Task>> {
     Ok(tasks)
 }
 
+pub(crate) fn header_regex() -> &'static Regex {
+    &HEADER_REGEX
+}
+
+pub(crate) fn detect_quadrant_pub(header_text: &str) -> Option<Quadrant> {
+    detect_quadrant(header_text)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

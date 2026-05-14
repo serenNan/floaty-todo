@@ -1,5 +1,10 @@
 # 变更日志
 
+## 2026-05-14 add markdown task parser (parser.rs)
+
+- implemented `parse_line` (regex-based, supports `- * +` bullets, `[ ] [x] [X]`, indent counting, trailing-whitespace trim) and `parse_file` (BOM stripping, stable 8-byte SHA-256 ID per file+line)
+- 10 unit tests pass (parse variants, alt bullets, indent, BOM, stable ID, non-task lines)
+
 ## 2026-05-14 add Rust foundations (error/types/hashing)
 
 - added `AppError` (thiserror) + `Result<T>` alias with Tauri-compatible `Serialize` impl; added `Task`, `AppConfig`, `ContentHash` structs and `hash_content` (SHA-256 via sha2)

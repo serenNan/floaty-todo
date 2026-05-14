@@ -1,4 +1,5 @@
 mod error;
+mod parser;
 mod types;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/

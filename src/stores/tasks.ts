@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { Task } from '../types/task';
+import type { Task, Quadrant } from '../types/task';
 import { api } from '../services/tauri-api';
 
 export const useTaskStore = defineStore('tasks', () => {
@@ -46,9 +46,9 @@ export const useTaskStore = defineStore('tasks', () => {
     catch (e: any) { error.value = String(e); }
   }
 
-  async function add(text: string, sourceId?: string) {
+  async function add(text: string, sourceId?: string, quadrant?: Quadrant | null) {
     if (!text.trim()) return;
-    try { await api.addTask(text.trim(), sourceId); await silentRefresh(); }
+    try { await api.addTask(text.trim(), sourceId, quadrant); await silentRefresh(); }
     catch (e: any) { error.value = String(e); }
   }
 

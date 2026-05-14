@@ -1,5 +1,17 @@
 # 变更日志
 
+## 2026-05-14 pin icon now classic drawing-pin red, not muted
+
+The pin icon used to inherit the footer's muted text colour even when
+pinned, so the active state was barely visible. Now uses #ef4444 across
+both themes — saturated thumb-tack red when pinned, half-red half-muted
+when floating so the toggle reads clearly without losing the affordance.
+
+- `src/components/TaskList.vue`: `.pin-btn` colour rules — `.active`
+  uses #ef4444 for icon / border / soft background, hover deepens to
+  ~22% mix; `:not(.active)` uses a 55%-mixed red-ish muted, hover snaps
+  to full red
+
 ## 2026-05-14 unified cartoon SVG icon library — replaces every ASCII / emoji glyph
 
 Every icon-style button across the app now renders through a single

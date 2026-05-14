@@ -222,12 +222,25 @@ async function submit() {
   justify-content: center;
 }
 
+/* Classic drawing-pin red so the pinned state pops against the muted
+   footer. Stays consistent across both light and dark themes since the
+   hue is the same; saturation alone reads as "thumb-tack red". */
 .pin-btn.active {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
-  background: var(--accent-soft);
+  color: #ef4444;
+  border-color: color-mix(in srgb, #ef4444 35%, var(--border));
+  background: color-mix(in srgb, #ef4444 14%, transparent);
 }
 .pin-btn.active:hover {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, #ef4444 22%, transparent);
+  border-color: color-mix(in srgb, #ef4444 55%, var(--border));
+}
+/* Floating (unpinned) state: a faint hint of the same red but mostly
+   muted, so the toggle reads as "off" without losing the affordance. */
+.pin-btn:not(.active) {
+  color: color-mix(in srgb, #ef4444 55%, var(--text-muted));
+}
+.pin-btn:not(.active):hover {
+  color: #ef4444;
+  background: color-mix(in srgb, #ef4444 10%, transparent);
 }
 </style>

@@ -1,6 +1,24 @@
 # 变更日志
 
-## 2026-05-14 open_in_vscode / open_in_terminal commands
+## 2026-05-14 source-grouped UI with per-source actions and inline editor
+
+Tasks now render grouped by source instead of one flat list, with each
+source header carrying the new shell-action buttons and an inline edit
+panel for label / project_root / set-default / remove.
+
+- `src/components/SourceGroup.vue`: new — collapsible header (caret +
+  kind icon + label + default badge + per-source todo/done counts), three
+  icon buttons (⎘ open-in-VS-Code · ▷ open-in-terminal · ⋯ edit), and
+  inline editor with Label / Project root (+ folder picker) / Set-default
+  / Remove (with confirm) / Save · Cancel
+- `src/components/TaskList.vue`: rewritten to render `SourceGroup` for
+  each source in user-defined order; QuickAdd input gains a target-source
+  dropdown (`default (foo)` plus an entry per source) and the placeholder
+  reflects where the new task will land; footer collapses to totals +
+  `📁+ / 📄+ / ↻` chips
+- Sources with zero tasks now show "No tasks in this source." so they
+  stay visible as the launchpad for VS Code / terminal actions
+
 
 Each `Source` now exposes two side-effect commands that launch external tools
 at its `effective_project_root()` (the configured `project_root`, or default

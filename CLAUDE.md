@@ -61,6 +61,8 @@ Tasks reference their source via `Task.source_id`. The registry keys files by `(
 | `src/stores/settings.ts` | `useSettingsStore` — `config` / `sources` / `hasSources` / `defaultSourceId`; `addSource` / `removeSource` / `updateSource` / `setDefaultSource` / `pickAndAddFolder` / `pickAndAddFile` |
 | `src/main.ts` | App entry — wires `createPinia()` then mounts `App` |
 | `src/composables/useTheme.ts` | Theme composable — `currentTheme` / `effectiveTheme` / `setTheme`; localStorage `floaty.theme`, system media query listener |
+| `src/components/SourceGroup.vue` | Collapsible per-source group: header (caret + kind icon + label + default badge + counts) + action chips (⎘ VS Code / ▷ terminal / ⋯ edit) + inline editor (label / project_root / set-default / remove) + task rows |
+| `src/components/TaskList.vue` | Grouped task view (renders `SourceGroup` per source in config order); QuickAdd input + per-task source dropdown; footer totals + `📁+`/`📄+`/`↻` chips |
 | `src/components/TitleBar.vue` | Custom 32px title bar — drag region, theme cycle (☀/🌙/🖥), minimize, hide-to-tray close |
 
 ## Build Commands

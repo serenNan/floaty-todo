@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-14 add atomic line-level storage (storage.rs)
+
+- implemented `toggle_task` (1-indexed, CRLF-safe, `split_inclusive` line preservation) and `append_task` (creates file + `# Inbox` header if missing)
+- `atomic_write` uses `tempfile::NamedTempFile` + `persist` (rename) for crash-safe writes; returns `ContentHash` (SHA-256) for watcher loop prevention
+- `replace_first_bracket` is byte-safe ASCII scan — no regex, O(n) on line length
+- 9 unit tests pass (toggle both directions, CRLF, hash round-trip, non-task error, append variants)
+- `mod storage;` added to `lib.rs`
+
 ## 2026-05-14 add markdown task parser (parser.rs)
 
 - implemented `parse_line` (regex-based, supports `- * +` bullets, `[ ] [x] [X]`, indent counting, trailing-whitespace trim) and `parse_file` (BOM stripping, stable 8-byte SHA-256 ID per file+line)

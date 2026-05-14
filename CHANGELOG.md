@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-05-14 add fs watcher (debounced + loop prevention)
+
+- `start_watching(vault, ignore, on_event)` wraps `notify-debouncer-full` with 200ms debounce; emits `WatchEvent::Changed` or `WatchEvent::Deleted` for markdown paths only
+- `IgnoreHashes` (Arc+Mutex HashSet) provides single-shot loop prevention: writer registers content hash before write, watcher discards matching events and removes the entry
+- Fixed `ev.paths` borrow: accessed via `ev.event.paths` (owned) to avoid Deref move-out error; added `use notify::Watcher` for `watch()` method in scope
+- `WatcherHandle` wraps `Debouncer` to own its lifetime; drop stops the background thread
+- 4 unit tests pass (hash register+consume, external change detection, hash-based suppression, non-markdown ignore) — run serialized with `--test-threads=1`
+- `mod watcher;` added to `lib.rs`
+
 ## 2026-05-14 add registry (task index + ignore list)
 
 - `TaskRegistry` holds `HashMap<id, Task>` + `HashMap<PathBuf, Vec<id>>` for per-file invalidation

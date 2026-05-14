@@ -8,6 +8,45 @@ use crate::error::{AppError, Result};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+/// Reveal `path` in the OS file manager. For a folder this opens that
+/// folder; for a file we open its containing directory (Windows allows
+/// `/select,<file>` to highlight the file itself, which we use when the
+/// path points at a file).
+pub fn reveal_in_explorer(path: &Path) -> Result<()> {
+    let mut cmd = if cfg!(windows) {
+        let mut c = Command::new("explorer.exe");
+        // /select, makes Explorer highlight the file in its parent dir;
+        // for directories we just pass the path.
+        if path.is_file() {
+            c.arg(format!("/select,{}", path.display()));
+        } else {
+            c.arg(path);
+        }
+        c
+    } else if cfg!(target_os = "macos") {
+        let mut c = Command::new("open");
+        if path.is_file() {
+            c.args(["-R"]).arg(path);
+        } else {
+            c.arg(path);
+        }
+        c
+    } else {
+        // Linux: xdg-open on the containing directory for files.
+        let mut c = Command::new("xdg-open");
+        let target = if path.is_file() {
+            path.parent().unwrap_or(path)
+        } else {
+            path
+        };
+        c.arg(target);
+        c
+    };
+    spawn_detached(&mut cmd).map_err(|e| {
+        AppError::CommandFailed(format!("reveal_in_explorer: {e}"))
+    })
+}
+
 /// Open a URL with the OS default handler (browser for http/https,
 /// mail client for mailto:, etc.). Cheap to invoke and detached from us.
 pub fn open_url(url: &str) -> Result<()> {

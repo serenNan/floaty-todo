@@ -1,5 +1,64 @@
 # 变更日志
 
+## 2026-05-15 collapse-all, full-header click, drag-to-reorder actions, reveal-in-explorer
+
+Four UX rough-edges polished in one pass:
+
+1. **Collapse / expand all** — new footer button (next to Settings) flips
+   every source + every file group at once via a global trigger.
+2. **Whole header clicks toggle** — used to require hitting the tiny
+   chevron; now anywhere on a source or file header works. Action
+   chips stop propagation so clicking VS Code doesn't also collapse.
+3. **Drag-to-reorder quick-action buttons** — grabbing any chip on a
+   source header and dropping it on another reorders
+   `enabled_quick_actions` globally (same list drives every source).
+4. **"Reveal in file manager"** — new `QuickActionKind::Reveal` opens
+   the source's path in Explorer / Finder / xdg-open; a matching
+   yellow folder button shows up on every source header and in the
+   footer's hub cluster. Default `enabled_quick_actions` now ships
+   `reveal + vscode + terminal` so the file-manager affordance is
+   discoverable out of the box.
+
+### Backend
+- `types.rs`: `QuickActionKind::Reveal` variant; `default_quick_actions()`
+  now `[Reveal, Vscode, Terminal]`
+- `shell.rs::reveal_in_explorer(path)` — Windows `explorer.exe` (with
+  `/select,<file>` to highlight a file in its parent dir), macOS
+  `open -R` for files / `open` for folders, Linux `xdg-open` on the
+  containing directory
+- `commands.rs`: new `reveal_source(source_id)`; `run_quick_action` and
+  `open_hub` dispatch `Reveal` to `reveal_in_explorer`
+- `lib.rs`: registers `reveal_source`
+
+### Frontend
+- `src/composables/useCollapse.ts` (new): `collapseAll()` /
+  `expandAll()` increment counter refs; `bindCollapse(setter)` wires a
+  component's local `collapsed` ref to both tokens via `watch`
+- `src/components/icons/Icon.vue`: new `collapse-all` and `expand-all`
+  glyphs (chevrons + centre line)
+- `src/components/icons/QuickActionIcon.vue`: new `reveal` SVG —
+  open-folder with a magnifier inside; yellow `#f59e0b` brand colour
+- `src/components/TaskList.vue`: footer `collapse/expand-all` toggle
+  next to Settings; hub-reveal button (when hub configured) in the
+  brand-coloured right-hand cluster ahead of hub-vscode + hub-claude
+- `src/components/SourceGroup.vue`:
+  - header click toggles `collapsed` (caret is now a decorative span);
+    actions cluster + edit panel use `@click.stop` to avoid
+    bubbling into the toggle
+  - subscribes to `bindCollapse`
+  - each `.icon-btn.brand` is `draggable="true"`; dragstart/over/leave/
+    drop/end track `dragKind` + `dropTargetKind`; on drop we splice the
+    enabled list and call `setEnabledQuickActions`; CSS gives the
+    grabbed chip a 0.4 opacity and the drop target an accent outline
+- `src/components/FileGroup.vue`: same header-click + bindCollapse
+  treatment; editor uses `@click.stop`
+- `src/views/SettingsView.vue`: `ALL_QUICK_ACTIONS` lists `reveal` at
+  the top; per-card actions get a reveal button; `revealSource(s)`
+  calls `runQuickAction('reveal')`
+- `src/i18n/locales/{en,zh}.ts`: `source.reveal`,
+  `settings.sources.reveal`, `hub.reveal`, `tasks.collapseAll` /
+  `expandAll` strings
+
 ## 2026-05-14 hub shortcuts in TaskList footer (VS Code / Claude Code)
 
 When a hub folder is configured, the footer now shows two brand-coloured

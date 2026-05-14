@@ -40,6 +40,7 @@ const languages: Array<{ value: Locale; label: string }> = [
 /// off + on re-appends, which is the cheapest way to control ordering
 /// without a separate drag-and-drop reorder UI.
 const ALL_QUICK_ACTIONS: Array<{ kind: QuickActionKind; i18nKey: string }> = [
+  { kind: 'reveal',      i18nKey: 'source.reveal' },
   { kind: 'vscode',      i18nKey: 'source.openVscode' },
   { kind: 'terminal',    i18nKey: 'source.openTerminal' },
   { kind: 'claude_code', i18nKey: 'source.openClaudeCode' },
@@ -163,6 +164,10 @@ async function openVscode(s: Source) {
 }
 async function openTerminal(s: Source) {
   try { await api.openInTerminal(s.id); }
+  catch (e: any) { actionError.value = String(e); }
+}
+async function revealSource(s: Source) {
+  try { await api.runQuickAction(s.id, 'reveal'); }
   catch (e: any) { actionError.value = String(e); }
 }
 </script>
@@ -291,6 +296,9 @@ async function openTerminal(s: Source) {
               <div class="src-path" :title="s.path">{{ s.path }}</div>
             </div>
             <div class="src-actions">
+              <button class="icon-btn" @click="revealSource(s)" :title="t('settings.sources.reveal')">
+                <QuickActionIcon kind="reveal" />
+              </button>
               <button class="icon-btn" @click="openVscode(s)" :title="t('settings.sources.openVscode')">
                 <QuickActionIcon kind="vscode" />
               </button>

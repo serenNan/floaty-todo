@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
+import { bindCollapse } from '../composables/useCollapse';
 import TaskItem from './TaskItem.vue';
 import Icon from './icons/Icon.vue';
 
@@ -26,6 +27,8 @@ const settings = useSettingsStore();
 const collapsed = ref(props.initialCollapsed);
 const editing = ref(false);
 const labelDraft = ref('');
+
+bindCollapse(next => { collapsed.value = next; });
 
 // User-provided label, if any.
 const customLabel = computed(() => settings.fileLabel(props.filePath));
@@ -72,23 +75,27 @@ async function clearLabel() {
 
 <template>
   <div class="file-group" :class="{ collapsed }">
-    <header class="head">
-      <button class="caret" @click="collapsed = !collapsed" :title="collapsed ? t('source.expand') : t('source.collapse')">
+    <header
+      class="head"
+      @click="collapsed = !collapsed"
+      :title="collapsed ? t('source.expand') : t('source.collapse')"
+    >
+      <span class="caret" aria-hidden="true">
         <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="13" />
-      </button>
+      </span>
       <span class="name" :title="filePath">{{ displayLabel }}</span>
       <span class="count">{{ counts.todo }}<span v-if="counts.done" class="done">·{{ counts.done }}✓</span></span>
       <button
         class="edit-btn"
         :class="{ active: editing }"
-        @click="editing ? cancelEdit() : startEdit()"
+        @click.stop="editing ? cancelEdit() : startEdit()"
         :title="t('file.editLabel')"
       >
         <Icon name="pencil" :size="12" />
       </button>
     </header>
 
-    <div v-if="editing" class="editor">
+    <div v-if="editing" class="editor" @click.stop>
       <input
         v-model="labelDraft"
         :placeholder="fallbackLabel"
@@ -124,21 +131,21 @@ async function clearLabel() {
   font-size: 0.78rem;
   color: var(--text);
   user-select: none;
+  cursor: pointer;
+  transition: background 120ms ease-out;
 }
+.head:hover { background: var(--surface-strong); }
 
 .caret {
   width: 18px;
   height: 18px;
-  padding: 0;
-  background: transparent;
-  border: none;
   color: var(--text-muted);
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
-.caret:hover { color: var(--text); }
+.head:hover .caret { color: var(--text); }
 
 .name {
   flex: 1;

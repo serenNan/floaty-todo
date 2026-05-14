@@ -5,6 +5,7 @@ import type { QuickActionKind, Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
 import { confirm } from '../composables/useConfirm';
+import { bindCollapse } from '../composables/useCollapse';
 import FileGroup from './FileGroup.vue';
 import TaskItem from './TaskItem.vue';
 import QuickActionIcon from './icons/QuickActionIcon.vue';
@@ -25,6 +26,9 @@ const editing = ref(false);
 const labelDraft = ref('');
 const rootDraft = ref('');
 const actionError = ref<string | null>(null);
+
+// React to global "Collapse all" / "Expand all" from the footer button.
+bindCollapse(next => { collapsed.value = next; });
 
 const isDefault = computed(() => settings.defaultSourceId === props.source.id);
 
@@ -114,11 +118,60 @@ async function runAction(kind: QuickActionKind) {
   catch (e: any) { actionError.value = String(e); }
 }
 
+// Drag-and-drop reordering for quick-action buttons. The new order is
+// persisted to settings.enabled_quick_actions, so reordering here also
+// reorders the same buttons on every *other* source — desired, since
+// the toggle list is global.
+const dragKind = ref<QuickActionKind | null>(null);
+const dropTargetKind = ref<QuickActionKind | null>(null);
+
+function onActionDragStart(e: DragEvent, kind: QuickActionKind) {
+  dragKind.value = kind;
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move';
+    // Some browsers require a payload or the drag never starts.
+    e.dataTransfer.setData('text/plain', kind);
+  }
+}
+function onActionDragOver(e: DragEvent, kind: QuickActionKind) {
+  if (!dragKind.value || dragKind.value === kind) return;
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  dropTargetKind.value = kind;
+}
+function onActionDragLeave(kind: QuickActionKind) {
+  if (dropTargetKind.value === kind) dropTargetKind.value = null;
+}
+async function onActionDrop(e: DragEvent, targetKind: QuickActionKind) {
+  e.preventDefault();
+  const src = dragKind.value;
+  dragKind.value = null;
+  dropTargetKind.value = null;
+  if (!src || src === targetKind) return;
+  const order = [...settings.enabledQuickActions];
+  const srcIdx = order.indexOf(src);
+  if (srcIdx < 0) return;
+  order.splice(srcIdx, 1);
+  const newTgtIdx = order.indexOf(targetKind);
+  if (newTgtIdx < 0) {
+    order.push(src);
+  } else {
+    order.splice(newTgtIdx, 0, src);
+  }
+  try { await settings.setEnabledQuickActions(order); }
+  catch (e: any) { actionError.value = String(e); }
+}
+function onActionDragEnd() {
+  dragKind.value = null;
+  dropTargetKind.value = null;
+}
+
 interface ActionMeta {
   kind: QuickActionKind;
   i18n: string;
 }
 const ACTION_META: Record<QuickActionKind, ActionMeta> = {
+  reveal:      { kind: 'reveal',      i18n: 'source.reveal' },
   vscode:      { kind: 'vscode',      i18n: 'source.openVscode' },
   terminal:    { kind: 'terminal',    i18n: 'source.openTerminal' },
   claude_code: { kind: 'claude_code', i18n: 'source.openClaudeCode' },
@@ -144,10 +197,17 @@ const kindEmoji = computed(() => {
 
 <template>
   <section class="group" :class="{ collapsed }">
-    <header class="group-head">
-      <button class="caret" @click="collapsed = !collapsed" :title="collapsed ? t('source.expand') : t('source.collapse')">
+    <header
+      class="group-head"
+      @click="collapsed = !collapsed"
+      :title="collapsed ? t('source.expand') : t('source.collapse')"
+    >
+      <!-- Caret is decorative now — the whole header handles the toggle.
+           Keeping the visual chevron so the disclosure affordance still
+           reads, but click cost goes to anywhere in the bar. -->
+      <span class="caret" aria-hidden="true">
         <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="14" />
-      </button>
+      </span>
       <span class="kind-icon" aria-hidden="true">{{ kindEmoji }}</span>
       <span class="label" :title="source.path">{{ displayLabel }}</span>
       <span v-if="isDefault" class="badge" :title="t('source.defaultBadge')">{{ t('source.defaultBadge') }}</span>
@@ -157,11 +217,24 @@ const kindEmoji = computed(() => {
       <span class="counts">
         {{ counts.todo }}<span v-if="counts.done"> · {{ counts.done }}✓</span>
       </span>
-      <div class="actions">
+      <!-- Actions cluster: clicks here must NOT bubble to the header
+           toggle, otherwise tapping an action would collapse the group.
+           Drag-and-drop reorders the buttons across every source. -->
+      <div class="actions" @click.stop>
         <button
           v-for="a in enabledActions"
           :key="a.kind"
           class="icon-btn brand"
+          :class="{
+            dragging: dragKind === a.kind,
+            'drop-target': dropTargetKind === a.kind,
+          }"
+          draggable="true"
+          @dragstart="onActionDragStart($event, a.kind)"
+          @dragover="onActionDragOver($event, a.kind)"
+          @dragleave="onActionDragLeave(a.kind)"
+          @drop="onActionDrop($event, a.kind)"
+          @dragend="onActionDragEnd"
           @click="runAction(a.kind)"
           :title="t(a.i18n)"
         >
@@ -173,7 +246,7 @@ const kindEmoji = computed(() => {
       </div>
     </header>
 
-    <div v-if="editing" class="editor">
+    <div v-if="editing" class="editor" @click.stop>
       <label>
         {{ t('source.fields.label') }}
         <input v-model="labelDraft" :placeholder="displayLabel" />
@@ -241,21 +314,21 @@ const kindEmoji = computed(() => {
   font-size: 0.82rem;
   color: var(--text);
   user-select: none;
+  cursor: pointer;
+  transition: background 120ms ease-out;
 }
+.group-head:hover { background: var(--accent-soft); }
 
 .caret {
   width: 20px;
   height: 20px;
-  padding: 0;
-  background: transparent;
-  border: none;
   color: var(--text-muted);
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
-.caret:hover { color: var(--text); }
+.group-head:hover .caret { color: var(--text); }
 
 .kind-icon {
   display: inline-flex;
@@ -348,6 +421,23 @@ const kindEmoji = computed(() => {
      readable against a soft tint of itself. */
   background: color-mix(in srgb, currentColor 10%, transparent);
   border-color: color-mix(in srgb, currentColor 30%, transparent);
+}
+
+/* Drag feedback: dim the grabbed button, accent-outline the drop target. */
+.icon-btn.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.icon-btn.drop-target {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+.icon-btn.brand[draggable="true"] {
+  cursor: grab;
+}
+.icon-btn.brand[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .editor {

@@ -8,6 +8,8 @@
 
 export type IconName =
   | 'settings'
+  | 'collapse-all'
+  | 'expand-all'
   | 'refresh'
   | 'plus'
   | 'chevron-down'
@@ -157,6 +159,21 @@ withDefaults(defineProps<{
     <g v-else-if="name === 'x'">
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
+    </g>
+
+    <!-- Collapse-all: two chevrons pointing inward (top down, bottom up)
+         meeting at a centre line — reads as "everything pulls together". -->
+    <g v-else-if="name === 'collapse-all'">
+      <polyline points="7 8 12 3 17 8" />
+      <polyline points="7 16 12 21 17 16" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+    </g>
+
+    <!-- Expand-all: two chevrons pointing outward from a centre line. -->
+    <g v-else-if="name === 'expand-all'">
+      <polyline points="7 4 12 9 17 4" />
+      <polyline points="7 20 12 15 17 20" />
+      <line x1="4" y1="12" x2="20" y2="12" />
     </g>
   </svg>
 </template>

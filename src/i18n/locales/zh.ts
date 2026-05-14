@@ -17,6 +17,8 @@ export default {
     doneCount: '{n} 已完成',
     refresh: '刷新',
     refreshTitle: '刷新（重新读取所有 .md 文件）',
+    collapseAll: '全部折叠',
+    expandAll: '全部展开',
     addFolderTitle: '添加文件夹源',
     addFileTitle: '添加文件源',
   },
@@ -33,6 +35,7 @@ export default {
     openVscode: '用 VS Code 打开',
     openTerminal: '在此打开终端',
     openClaudeCode: '启动 Claude Code 会话',
+    reveal: '在文件管理器中显示',
     edit: '编辑此源',
     scanning: '正在扫描…',
     scanningHint: '正在扫描该源下的文件，请稍候。',
@@ -88,6 +91,7 @@ export default {
       addFile: '添加文件',
       defaultBadge: '默认',
       setDefault: '设为默认',
+      reveal: '在文件管理器中显示',
       openVscode: '用 VS Code 打开',
       openTerminal: '打开终端',
       edit: '编辑名称 / 项目根目录',
@@ -107,6 +111,7 @@ export default {
   hub: {
     openVscode: '用 VS Code 打开中枢文件夹',
     openClaudeCode: '在中枢文件夹启动 Claude Code 会话',
+    reveal: '在文件管理器中显示中枢文件夹',
   },
   confirm: {
     defaultTitle: '确认操作',

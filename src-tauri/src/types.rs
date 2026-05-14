@@ -30,12 +30,20 @@ pub enum QuickActionKind {
     Vscode,
     Terminal,
     ClaudeCode,
+    /// Open the source's path in the OS file manager (Explorer, Finder,
+    /// or `xdg-open`). Operates on the path itself for folders, on the
+    /// containing directory for files.
+    Reveal,
 }
 
-/// Defaults shipped to brand-new users — VS Code + terminal, no Claude Code.
+/// Defaults shipped to brand-new users — Reveal + VS Code + terminal.
 /// User toggles them in Settings → Quick actions.
 pub fn default_quick_actions() -> Vec<QuickActionKind> {
-    vec![QuickActionKind::Vscode, QuickActionKind::Terminal]
+    vec![
+        QuickActionKind::Reveal,
+        QuickActionKind::Vscode,
+        QuickActionKind::Terminal,
+    ]
 }
 
 /// A user-configured task source — either a folder (recursive `.md` scan)

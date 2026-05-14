@@ -171,6 +171,7 @@ pub fn run() {
             commands::open_in_vscode,
             commands::open_in_terminal,
             commands::open_in_claude_code,
+            commands::reveal_source,
             commands::run_quick_action,
             commands::set_enabled_quick_actions,
             commands::set_hub_folder,

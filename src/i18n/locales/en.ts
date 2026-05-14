@@ -17,6 +17,8 @@ export default {
     doneCount: '{n} done',
     refresh: 'Refresh',
     refreshTitle: 'Refresh (re-read all .md files)',
+    collapseAll: 'Collapse all',
+    expandAll: 'Expand all',
     addFolderTitle: 'Add folder source',
     addFileTitle: 'Add file source',
   },
@@ -33,6 +35,7 @@ export default {
     openVscode: 'Open in VS Code',
     openTerminal: 'Open terminal here',
     openClaudeCode: 'Open Claude Code session',
+    reveal: 'Show in file manager',
     edit: 'Edit source',
     scanning: 'Scanning source…',
     scanningHint: 'Scanning files in this source — please wait.',
@@ -88,6 +91,7 @@ export default {
       addFile: 'Add file',
       defaultBadge: 'default',
       setDefault: 'Set default',
+      reveal: 'Show in file manager',
       openVscode: 'Open in VS Code',
       openTerminal: 'Open terminal',
       edit: 'Edit label / project root',
@@ -107,6 +111,7 @@ export default {
   hub: {
     openVscode: 'Open hub folder in VS Code',
     openClaudeCode: 'Open Claude Code session on hub folder',
+    reveal: 'Show hub folder in file manager',
   },
   confirm: {
     defaultTitle: 'Are you sure?',

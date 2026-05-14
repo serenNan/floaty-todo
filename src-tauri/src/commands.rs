@@ -321,6 +321,13 @@ pub fn open_in_terminal(state: State<'_, AppState>, source_id: String) -> Result
     crate::shell::open_terminal(&target)
 }
 
+/// Reveal the source's path in the OS file manager.
+#[tauri::command]
+pub fn reveal_source(state: State<'_, AppState>, source_id: String) -> Result<()> {
+    let source = find_source_by_id(&state, &source_id)?;
+    crate::shell::reveal_in_explorer(&source.path)
+}
+
 /// Open a fresh Claude Code session at the source's effective project root.
 #[tauri::command]
 pub fn open_in_claude_code(state: State<'_, AppState>, source_id: String) -> Result<()> {
@@ -339,11 +346,19 @@ pub fn run_quick_action(
     kind: QuickActionKind,
 ) -> Result<()> {
     let source = find_source_by_id(&state, &source_id)?;
-    let target = source.effective_project_root();
+    // Reveal points at the source's own path (file or folder); the others
+    // jump to the effective project root configured for shell launchers.
     match kind {
-        QuickActionKind::Vscode => crate::shell::open_vscode(&target),
-        QuickActionKind::Terminal => crate::shell::open_terminal(&target),
-        QuickActionKind::ClaudeCode => crate::shell::open_claude_code(&target),
+        QuickActionKind::Vscode => {
+            crate::shell::open_vscode(&source.effective_project_root())
+        }
+        QuickActionKind::Terminal => {
+            crate::shell::open_terminal(&source.effective_project_root())
+        }
+        QuickActionKind::ClaudeCode => {
+            crate::shell::open_claude_code(&source.effective_project_root())
+        }
+        QuickActionKind::Reveal => crate::shell::reveal_in_explorer(&source.path),
     }
 }
 
@@ -390,6 +405,7 @@ pub fn open_hub(state: State<'_, AppState>, kind: QuickActionKind) -> Result<()>
         QuickActionKind::Vscode => crate::shell::open_vscode(&hub),
         QuickActionKind::Terminal => crate::shell::open_terminal(&hub),
         QuickActionKind::ClaudeCode => crate::shell::open_claude_code(&hub),
+        QuickActionKind::Reveal => crate::shell::reveal_in_explorer(&hub),
     }
 }
 

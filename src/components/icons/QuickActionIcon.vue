@@ -78,6 +78,42 @@ defineProps<{ kind: QuickActionKind }>();
       d="M12 2.5c.3 0 .55.2.62.49l1.27 5.04a3 3 0 0 0 2.08 2.08l5.04 1.27c.29.07.49.32.49.62s-.2.55-.49.62l-5.04 1.27a3 3 0 0 0-2.08 2.08l-1.27 5.04c-.07.29-.32.49-.62.49s-.55-.2-.62-.49l-1.27-5.04a3 3 0 0 0-2.08-2.08L2.99 12.62A.64.64 0 0 1 2.5 12c0-.3.2-.55.49-.62l5.04-1.27a3 3 0 0 0 2.08-2.08l1.27-5.04A.64.64 0 0 1 12 2.5z"
     />
   </svg>
+
+  <svg
+    v-else-if="kind === 'reveal'"
+    class="qa-icon reveal"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <!--
+      "Reveal in file manager" — open folder with a magnifier inside.
+      Reads as "look inside this folder" at 14px without being literal.
+    -->
+    <path
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linejoin="round"
+      d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+    />
+    <circle
+      cx="13"
+      cy="14"
+      r="2.4"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+    />
+    <line
+      x1="14.9"
+      y1="15.9"
+      x2="17.2"
+      y2="18.2"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+    />
+  </svg>
 </template>
 
 <style scoped>
@@ -91,9 +127,11 @@ defineProps<{ kind: QuickActionKind }>();
 .qa-icon.vscode  { color: #0098ff; }
 .qa-icon.terminal { color: #4daa7f; }   /* PowerShell-ish blue-green */
 .qa-icon.claude  { color: #d97757; }   /* Anthropic warm orange */
+.qa-icon.reveal  { color: #f59e0b; }   /* Folder yellow — system-file-manager vibe */
 
 /* Dark mode: nudge brand tones for readability on the glass surface. */
 :global(:root[data-theme="dark"]) .qa-icon.vscode  { color: #29b6ff; }
 :global(:root[data-theme="dark"]) .qa-icon.terminal { color: #5ec79a; }
 :global(:root[data-theme="dark"]) .qa-icon.claude  { color: #e89178; }
+:global(:root[data-theme="dark"]) .qa-icon.reveal  { color: #fbbf24; }
 </style>

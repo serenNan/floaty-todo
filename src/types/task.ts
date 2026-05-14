@@ -1,6 +1,6 @@
 export type SourceKind = 'folder' | 'file';
 
-export type QuickActionKind = 'vscode' | 'terminal' | 'claude_code';
+export type QuickActionKind = 'vscode' | 'terminal' | 'claude_code' | 'reveal';
 
 export interface Source {
   id: string;

@@ -5,6 +5,7 @@ import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
 import { useSettingsStore } from '../stores/settings';
 import { api } from '../services/tauri-api';
+import { collapseAll, expandAll } from '../composables/useCollapse';
 import SourceGroup from './SourceGroup.vue';
 import Icon from './icons/Icon.vue';
 import QuickActionIcon from './icons/QuickActionIcon.vue';
@@ -94,6 +95,23 @@ async function openHubInClaudeCode() {
   try { await api.openHub('claude_code'); }
   catch (e) { console.warn('openHub claude_code failed:', e); }
 }
+async function revealHub() {
+  try { await api.openHub('reveal'); }
+  catch (e) { console.warn('openHub reveal failed:', e); }
+}
+
+// "Collapse all" toggles based on a local guess of state. We don't track
+// every individual collapsed flag — the trigger just broadcasts.
+const allCollapsed = ref(false);
+function toggleCollapseAll() {
+  if (allCollapsed.value) {
+    expandAll();
+    allCollapsed.value = false;
+  } else {
+    collapseAll();
+    allCollapsed.value = true;
+  }
+}
 </script>
 
 <template>
@@ -146,6 +164,13 @@ async function openHubInClaudeCode() {
       <button class="footer-btn icon-only" @click="$emit('openSettings')" :title="t('settings.title')">
         <Icon name="settings" :size="15" />
       </button>
+      <button
+        class="footer-btn icon-only"
+        @click="toggleCollapseAll"
+        :title="allCollapsed ? t('tasks.expandAll') : t('tasks.collapseAll')"
+      >
+        <Icon :name="allCollapsed ? 'expand-all' : 'collapse-all'" :size="15" />
+      </button>
       <span class="counts">
         {{ t('tasks.todoCount', { n: totals.todo }) }} · {{ t('tasks.doneCount', { n: totals.done }) }}
       </span>
@@ -154,6 +179,13 @@ async function openHubInClaudeCode() {
            otherwise they have nowhere to point. Brand-coloured so they
            feel like the per-source action buttons above. -->
       <template v-if="settings.hubFolder">
+        <button
+          class="footer-btn icon-only brand"
+          @click="revealHub"
+          :title="t('hub.reveal')"
+        >
+          <QuickActionIcon kind="reveal" />
+        </button>
         <button
           class="footer-btn icon-only brand"
           @click="openHubInVscode"

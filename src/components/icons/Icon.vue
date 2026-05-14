@@ -7,8 +7,6 @@
 /// Add new icons here rather than scattering raw SVG strings across components.
 
 export type IconName =
-  | 'pin'
-  | 'pin-off'
   | 'settings'
   | 'refresh'
   | 'plus'
@@ -47,22 +45,8 @@ withDefaults(defineProps<{
     aria-hidden="true"
     class="floaty-icon"
   >
-    <!-- Pin (active): plump, slightly tilted thumbtack with a filled head -->
-    <g v-if="name === 'pin'" transform="rotate(-18 12 12)">
-      <ellipse cx="12" cy="7.2" rx="5" ry="3.6" fill="currentColor" stroke="none" />
-      <ellipse cx="10.5" cy="6" rx="1.4" ry="0.9" fill="white" fill-opacity="0.45" stroke="none" />
-      <rect x="11" y="10.6" width="2" height="2.2" rx="0.4" fill="currentColor" stroke="none" />
-      <line x1="12" y1="13" x2="12" y2="20.5" stroke="currentColor" stroke-width="2.4" />
-    </g>
-
-    <!-- Pin (off): same shape, no fill, more tilt — feels "floating" -->
-    <g v-else-if="name === 'pin-off'" transform="rotate(-35 12 12)">
-      <ellipse cx="12" cy="7.2" rx="4.8" ry="3.4" />
-      <line x1="12" y1="10.6" x2="12" y2="20" />
-    </g>
-
     <!-- Settings: chunky gear with a clear centre -->
-    <g v-else-if="name === 'settings'">
+    <g v-if="name === 'settings'">
       <circle cx="12" cy="12" r="2.8" />
       <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
     </g>

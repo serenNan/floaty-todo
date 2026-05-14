@@ -90,7 +90,11 @@ async function submit() {
         @click="settings.toggleAlwaysOnTop"
         :title="settings.alwaysOnTop ? t('window.unpin') : t('window.pin')"
       >
-        <Icon :name="settings.alwaysOnTop ? 'pin' : 'pin-off'" :size="15" />
+        <!-- Use the actual U+1F4CC pushpin emoji — looks like a real
+             cartoon thumbtack from the OS font (Segoe UI Emoji on
+             Windows). Unpinned state uses grayscale + reduced opacity
+             so the affordance reads as "off" without losing the shape. -->
+        <span class="pin-emoji" aria-hidden="true">📌</span>
       </button>
       <button class="footer-btn icon-only" @click="tasks.refresh" :title="t('tasks.refreshTitle')">
         <Icon name="refresh" :size="15" />
@@ -222,25 +226,34 @@ async function submit() {
   justify-content: center;
 }
 
-/* Classic drawing-pin red so the pinned state pops against the muted
-   footer. Stays consistent across both light and dark themes since the
-   hue is the same; saturation alone reads as "thumb-tack red". */
+.pin-emoji {
+  font-size: 15px;
+  line-height: 1;
+  display: inline-block;
+  /* Force the system's colour-emoji glyph rather than the monochrome
+     fallback some browsers pick when an emoji sits next to plain text. */
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  transition: filter 140ms ease-out, transform 140ms ease-out;
+}
+
 .pin-btn.active {
-  color: #ef4444;
   border-color: color-mix(in srgb, #ef4444 35%, var(--border));
-  background: color-mix(in srgb, #ef4444 14%, transparent);
+  background: color-mix(in srgb, #ef4444 12%, transparent);
 }
 .pin-btn.active:hover {
-  background: color-mix(in srgb, #ef4444 22%, transparent);
+  background: color-mix(in srgb, #ef4444 20%, transparent);
   border-color: color-mix(in srgb, #ef4444 55%, var(--border));
 }
-/* Floating (unpinned) state: a faint hint of the same red but mostly
-   muted, so the toggle reads as "off" without losing the affordance. */
-.pin-btn:not(.active) {
-  color: color-mix(in srgb, #ef4444 55%, var(--text-muted));
+.pin-btn.active .pin-emoji {
+  /* Tilt slightly so it visibly differs from the off state at a glance. */
+  transform: rotate(-12deg);
 }
-.pin-btn:not(.active):hover {
-  color: #ef4444;
-  background: color-mix(in srgb, #ef4444 10%, transparent);
+
+/* Off: desaturate the colour emoji + fade so the toggle reads as "loose". */
+.pin-btn:not(.active) .pin-emoji {
+  filter: grayscale(0.85) opacity(0.55);
+}
+.pin-btn:not(.active):hover .pin-emoji {
+  filter: grayscale(0) opacity(0.85);
 }
 </style>

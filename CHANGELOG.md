@@ -1,5 +1,16 @@
 # 变更日志
 
+## 2026-05-14 pin button now uses the U+1F4CC pushpin emoji
+
+The cartoon-SVG pin didn't read as a thumbtack at 14px on Windows
+(stroke + ellipse looked more like a balloon). Replace it with the real
+📌 emoji — Segoe UI Emoji renders it in proper colour, and the off state
+desaturates via CSS `filter: grayscale(0.85) opacity(0.55)`. Active state
+adds a small `rotate(-12deg)` so the difference is obvious at a glance.
+
+- `src/components/TaskList.vue`: pin button renders a `<span class="pin-emoji">📌</span>` instead of `<Icon name="pin" />`; new `.pin-emoji` rules force the colour-emoji font and animate filter/transform on toggle
+- `src/components/icons/Icon.vue`: dropped the now-unused `pin` and `pin-off` cases from the union and template — keeps the central icon library tight
+
 ## 2026-05-14 hub folder — mirror every source via hard links / junctions
 
 Adds an opt-in "hub folder" that mirrors every configured source via

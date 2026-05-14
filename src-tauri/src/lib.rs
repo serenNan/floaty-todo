@@ -103,6 +103,10 @@ pub fn run() {
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
+                // Tauri 2 defaults to opening the menu on left-click; we want
+                // left-click to toggle the window and right-click to open the
+                // menu (Windows-conventional tray behaviour).
+                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => toggle_window(app, true),
                     "hide" => toggle_window(app, false),
@@ -113,16 +117,29 @@ pub fn run() {
                     if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
                         let app = tray.app_handle();
                         if let Some(w) = app.get_webview_window("main") {
-                            if w.is_visible().unwrap_or(false) {
+                            if w.is_visible().unwrap_or(false) && w.is_focused().unwrap_or(false) {
                                 let _ = w.hide();
                             } else {
                                 let _ = w.show();
+                                let _ = w.unminimize();
                                 let _ = w.set_focus();
                             }
                         }
                     }
                 })
                 .build(app)?;
+
+            // Intercept window close → hide to tray instead of exit. User must
+            // pick "Quit" from the tray menu (or kill the process) to exit.
+            if let Some(w) = app.get_webview_window("main") {
+                let w_clone = w.clone();
+                w.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = w_clone.hide();
+                    }
+                });
+            }
 
             Ok(())
         })

@@ -4,7 +4,7 @@
    and the useTheme composable — no media query needed here. */
 :root {
   color-scheme: light;
-  --bg:               rgba(245, 246, 248, 0.82);
+  --bg:               #f5f6f8;
   --surface:          rgba(255, 255, 255, 0.72);
   --surface-strong:   rgba(255, 255, 255, 0.92);
   --border:           rgba(148, 163, 184, 0.22);
@@ -12,7 +12,6 @@
   --text:             #1e293b;
   --text-muted:       #64748b;
   --card-shadow:      0 8px 24px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
-  --card-shadow-strong: 0 16px 40px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
   /* Accent: slate-500 / slate-400 — low-saturation, no brand blue */
   --accent:           #475569;
   --accent-soft:      rgba(71, 85, 105, 0.09);
@@ -20,7 +19,7 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg:               rgba(18, 20, 26, 0.84);
+  --bg:               #121319;
   --surface:          rgba(30, 33, 42, 0.72);
   --surface-strong:   rgba(40, 44, 56, 0.92);
   --border:           rgba(148, 163, 184, 0.14);
@@ -28,35 +27,28 @@
   --text:             #e2e8f0;
   --text-muted:       #94a3b8;
   --card-shadow:      0 8px 24px rgba(0, 0, 0, 0.32), 0 1px 3px rgba(0, 0, 0, 0.18);
-  --card-shadow-strong: 0 16px 40px rgba(0, 0, 0, 0.48), 0 2px 6px rgba(0, 0, 0, 0.24);
   --accent:           #94a3b8;
   --accent-soft:      rgba(148, 163, 184, 0.10);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Transparent window: body/root fully clear, main carries the visual background */
-html, body, #app { height: 100%; background: transparent; overflow: hidden; }
+html, body, #app { height: 100%; }
 
 body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 14px;
   color: var(--text);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Main window surface: glass card with rounded corners drawn in CSS */
 main {
   height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--card-shadow-strong);
 }
 
 /* Base controls */

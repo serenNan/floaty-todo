@@ -23,7 +23,7 @@ import Icon from './icons/Icon.vue';
 const BIG_SOURCE_TASK_THRESHOLD = 50;
 
 const props = defineProps<{ source: Source; tasks: Task[] }>();
-const emit = defineEmits<{ 'open-settings': [] }>();
+defineEmits<{ 'open-settings': [] }>();
 const { t } = useI18n();
 const settings = useSettingsStore();
 

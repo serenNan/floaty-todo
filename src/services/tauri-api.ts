@@ -8,6 +8,8 @@ export const api = {
   getConfig: () => invoke<AppConfig>('get_config'),
   updateConfig: (cfg: AppConfig) => invoke<void>('update_config', { newConfig: cfg }),
   toggleTask: (taskId: string) => invoke<void>('toggle_task', { taskId }),
+  updateTask: (taskId: string, newText: string) =>
+    invoke<void>('update_task', { taskId, newText }),
   addTask: (text: string, sourceId?: string) =>
     invoke<void>('add_task', { text, sourceId: sourceId ?? null }),
 

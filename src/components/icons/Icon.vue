@@ -15,6 +15,7 @@ export type IconName =
   | 'chevron-down'
   | 'chevron-right'
   | 'more-horizontal'
+  | 'grip-vertical'
   | 'pencil'
   | 'rotate-ccw'
   | 'folder'
@@ -78,6 +79,17 @@ withDefaults(defineProps<{
       <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
       <circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" />
       <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+    </g>
+
+    <!-- Grip-vertical (six dots, 2×3) — Lucide-style drag handle. Reads
+         as "grab here to reorder", distinct from a menu trigger. -->
+    <g v-else-if="name === 'grip-vertical'">
+      <circle cx="9" cy="5"  r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="19" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="5"  r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="19" r="1.4" fill="currentColor" stroke="none" />
     </g>
 
     <!-- Pencil (edit) -->
@@ -161,19 +173,18 @@ withDefaults(defineProps<{
       <line x1="6" y1="6" x2="18" y2="18" />
     </g>
 
-    <!-- Collapse-all: two chevrons pointing inward (top down, bottom up)
-         meeting at a centre line — reads as "everything pulls together". -->
+    <!-- Collapse-all: Lucide `chevrons-down-up` — pair of chevrons meeting
+         head-to-head at the centre. Same icon VS Code uses for "Fold All". -->
     <g v-else-if="name === 'collapse-all'">
-      <polyline points="7 8 12 3 17 8" />
-      <polyline points="7 16 12 21 17 16" />
-      <line x1="4" y1="12" x2="20" y2="12" />
+      <path d="m7 20 5-5 5 5" />
+      <path d="m7 4 5 5 5-5" />
     </g>
 
-    <!-- Expand-all: two chevrons pointing outward from a centre line. -->
+    <!-- Expand-all: Lucide `chevrons-up-down` — same chevrons facing away
+         from the centre. "Unfold All" counterpart. -->
     <g v-else-if="name === 'expand-all'">
-      <polyline points="7 4 12 9 17 4" />
-      <polyline points="7 20 12 15 17 20" />
-      <line x1="4" y1="12" x2="20" y2="12" />
+      <path d="m7 15 5 5 5-5" />
+      <path d="m7 9 5-5 5 5" />
     </g>
   </svg>
 </template>

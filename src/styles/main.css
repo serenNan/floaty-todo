@@ -15,6 +15,10 @@
   /* Accent: slate-500 / slate-400 — low-saturation, no brand blue */
   --accent:           #475569;
   --accent-soft:      rgba(71, 85, 105, 0.09);
+  /* Counter palette — todo = amber (warm, "still pending"), done = green (cool, "finished").
+     Used by source/file headers and the global footer totals. */
+  --count-todo:       #d97706;
+  --count-done:       #16a34a;
 }
 
 [data-theme="dark"] {
@@ -29,6 +33,8 @@
   --card-shadow:      0 8px 24px rgba(0, 0, 0, 0.32), 0 1px 3px rgba(0, 0, 0, 0.18);
   --accent:           #94a3b8;
   --accent-soft:      rgba(148, 163, 184, 0.10);
+  --count-todo:       #fbbf24;
+  --count-done:       #4ade80;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

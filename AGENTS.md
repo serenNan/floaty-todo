@@ -74,9 +74,9 @@ src-tauri/        # Rust 后端
 | `src/components/ConfirmDialog.vue` | 由 `useConfirm` 驱动的 Teleport 模态；点遮罩 / Esc 取消，confirm 按钮 focus-trap，危险动作有红色变体 |
 | `src/utils/inline-md.ts` | 零依赖 inline-only Markdown 解析器 → `InlineSegment[]`（text / code / bold / italic / strike / link）；`TaskItem` 用它安全渲染任务文本，不走 v-html |
 | `src/views/SettingsView.vue` | 全屏设置页 —— 外观（主题分段控件）、语言（locale 下拉）、快捷动作（按类型开关）、Hub 目录（选择 / 重同步 / 更改 / 关闭）、Sources（卡片 + ⎘ / ▷ / 📝 / 🗑 + 内嵌编辑器）、关于；emit `back` |
-| `src/components/SourceGroup.vue` | 可折叠的单 source 组：点 header 任意处切换折叠；header 带 `data-source-id` 供拖拽目标识别。Header 含 caret + 类型 emoji（折叠时翻转）+ label + 默认徽章 + 扫描旋转图标 + 数量 + 可拖排序的品牌色 `QuickActionIcon` 按钮 + 一个 `⋯` 按钮 —— **单击打开 Settings，按住拖动可重排整个 source**（用 `useSourceDrag`）。Folder source 按 `source_file` 分桶渲染嵌套 `FileGroup`（任务数 > 50 时初始全部折叠）；File source 直接渲染 TaskItem。订阅 `useCollapse` 响应全局「Collapse all」 |
+| `src/components/SourceGroup.vue` | 可折叠的单 source 组：点 header 任意处切换折叠；header 带 `data-source-id` 供拖拽目标识别。Header 含 caret + 类型 emoji（折叠时翻转）+ label + 默认徽章 + 扫描旋转图标 + 数量 + 可拖排序的品牌色 `QuickActionIcon` 按钮 + ⚙ 设置按钮（单击切换内嵌编辑器：label / project_root / set-default / remove）+ ⋮⋮ grip 拖拽手柄（**只做拖拽**，单击无动作；通过 `useSourceDrag` 重排 source）。Folder source 按 `source_file` 分桶渲染嵌套 `FileGroup`（任务数 > 50 时初始全部折叠）；File source 直接渲染 TaskItem。订阅 `useCollapse` 响应全局「Collapse all」 |
 | `src/components/icons/QuickActionIcon.vue` | 三个快捷动作的品牌色 inline SVG（VS Code / Terminal / Claude Code）；零依赖，适配深浅色 |
-| `src/components/icons/Icon.vue` | 中心化 SVG 图标库；`name: IconName` 字符串字面量联合 → 20 个 Lucide 风格的描边图标（pin / settings / refresh / chevron-* / pencil / folder / file / trash / sun / moon / monitor / arrow-left / loader 等）；非品牌标记的所有图标都来自这里 |
+| `src/components/icons/Icon.vue` | 中心化 SVG 图标库；`name: IconName` 字符串字面量联合 → 21 个 Lucide 风格的图标（settings / refresh / chevron-* / pencil / folder / file / trash / sun / moon / monitor / arrow-left / loader / more-horizontal / grip-vertical / collapse-all / expand-all 等）；非品牌标记的所有图标都来自这里 |
 | `src/components/FileGroup.vue` | `SourceGroup` 内的单文件子组：独立可折叠、悬停才显示的 ✎ 重命名按钮、内嵌重命名输入（Enter / Esc / ↺ 重置）；没自定义 label 时落到文件在 source 内的相对路径 |
 | `src/components/TaskList.vue` | 分组任务视图（按 config 顺序逐个渲染 `SourceGroup`）；QuickAdd 输入框 + 单任务 source 下拉；footer 左下角 ⚙ Settings + 计数 + ↻ 刷新 |
 | `src/components/EmptyState.vue` | 首次进入落地页：📁 Folder / 📄 File 选择器按钮 + 左下角 ⚙ Settings 角标按钮 |

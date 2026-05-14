@@ -22,6 +22,12 @@ export default {
     addFolderTitle: '添加文件夹源',
     addFileTitle: '添加文件源',
   },
+  task: {
+    edit: '编辑任务',
+    editPlaceholder: '编辑任务内容',
+    saveHint: '回车保存 · Esc 取消 · Ctrl+B 加粗 · Ctrl+I 斜体 · Ctrl+E 代码 · Ctrl+D 删除线 · Ctrl+K 链接',
+    previewLabel: '预览',
+  },
   file: {
     editLabel: '重命名此文件',
     resetLabel: '恢复默认名称',
@@ -37,6 +43,7 @@ export default {
     openClaudeCode: '启动 Claude Code 会话',
     reveal: '在文件管理器中显示',
     edit: '编辑此源',
+    dragHandle: '拖动以排序',
     scanning: '正在扫描…',
     scanningHint: '正在扫描该源下的文件，请稍候。',
     fields: {

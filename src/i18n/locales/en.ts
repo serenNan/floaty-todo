@@ -22,6 +22,12 @@ export default {
     addFolderTitle: 'Add folder source',
     addFileTitle: 'Add file source',
   },
+  task: {
+    edit: 'Edit task',
+    editPlaceholder: 'Edit task text',
+    saveHint: 'Enter to save · Esc to cancel · Ctrl+B bold · Ctrl+I italic · Ctrl+E code · Ctrl+D strike · Ctrl+K link',
+    previewLabel: 'Preview',
+  },
   file: {
     editLabel: 'Rename this file',
     resetLabel: 'Reset to default name',
@@ -37,6 +43,7 @@ export default {
     openClaudeCode: 'Open Claude Code session',
     reveal: 'Show in file manager',
     edit: 'Edit source',
+    dragHandle: 'Drag to reorder',
     scanning: 'Scanning source…',
     scanningHint: 'Scanning files in this source — please wait.',
     fields: {

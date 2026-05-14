@@ -40,11 +40,17 @@ export const useTaskStore = defineStore('tasks', () => {
     catch (e: any) { error.value = String(e); }
   }
 
+  async function update(id: string, text: string) {
+    if (!text.trim()) return;
+    try { await api.updateTask(id, text.trim()); await silentRefresh(); }
+    catch (e: any) { error.value = String(e); }
+  }
+
   async function add(text: string, sourceId?: string) {
     if (!text.trim()) return;
     try { await api.addTask(text.trim(), sourceId); await silentRefresh(); }
     catch (e: any) { error.value = String(e); }
   }
 
-  return { tasks, sortedTasks, loading, error, refresh, silentRefresh, toggle, add };
+  return { tasks, sortedTasks, loading, error, refresh, silentRefresh, toggle, update, add };
 });

@@ -60,6 +60,11 @@ pub struct Source {
     /// Where to "Open in VS Code" / "Open terminal here" jumps to.
     /// `None` → default to `path` (Folder) or `path.parent()` (File).
     pub project_root: Option<PathBuf>,
+    /// Optional accent color (CSS hex, e.g. "#ef4444"). The UI uses it as
+    /// a left-edge stripe + soft header tint so users can scan the source
+    /// list visually. `None` = no tint.
+    #[serde(default)]
+    pub color: Option<String>,
 }
 
 impl Source {

@@ -8,6 +8,7 @@ import EmptyState from './components/EmptyState.vue';
 import TaskList from './components/TaskList.vue';
 import SettingsView from './views/SettingsView.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
+import TaskEditorDialog from './components/TaskEditorDialog.vue';
 
 type View = 'tasks' | 'settings';
 
@@ -67,6 +68,7 @@ function backToTasks() { view.value = 'tasks'; }
       </Transition>
     </div>
     <ConfirmDialog />
+    <TaskEditorDialog />
   </main>
 </template>
 

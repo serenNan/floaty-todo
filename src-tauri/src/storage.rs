@@ -69,6 +69,64 @@ fn replace_first_bracket(line: &str, marker: char) -> String {
     line.to_string()
 }
 
+/// Replace the text part of the task on `line_number`, preserving the
+/// original indent, bullet style, checkbox state and trailing whitespace
+/// byte-for-byte. New text is trimmed and rejected if empty or contains
+/// a newline (task lines must stay single-line).
+pub fn update_task_text(path: &Path, line_number: usize, new_text: &str) -> Result<ContentHash> {
+    let trimmed = new_text.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::CommandFailed("task text cannot be empty".into()));
+    }
+    if trimmed.contains('\n') || trimmed.contains('\r') {
+        return Err(AppError::CommandFailed("task text cannot contain newlines".into()));
+    }
+
+    let raw = std::fs::read_to_string(path)?;
+    let mut lines: Vec<String> = raw.split_inclusive(|c| c == '\n').map(String::from).collect();
+    let idx = line_number.checked_sub(1).ok_or_else(|| AppError::NotATaskLine {
+        path: path.display().to_string(), line: line_number,
+    })?;
+    let line = lines.get(idx).cloned().ok_or_else(|| AppError::NotATaskLine {
+        path: path.display().to_string(), line: line_number,
+    })?;
+
+    let stripped = line.trim_end_matches(['\r', '\n']);
+    let trailing = &line[stripped.len()..];
+
+    let prefix_len = task_prefix_len(stripped).ok_or_else(|| AppError::NotATaskLine {
+        path: path.display().to_string(), line: line_number,
+    })?;
+    let prefix = &stripped[..prefix_len];
+    lines[idx] = format!("{}{}{}", prefix, trimmed, trailing);
+
+    let new_content: String = lines.concat();
+    atomic_write(path, new_content.as_bytes())
+}
+
+/// Length in bytes of the task "prefix" (indent + bullet + checkbox + spaces),
+/// up to and including the spaces after `]`. Returns None if the line is not a
+/// task line. Mirrors `parser::TASK_REGEX` but operates byte-wise so callers
+/// can keep the prefix verbatim.
+fn task_prefix_len(line: &str) -> Option<usize> {
+    let bytes = line.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() && matches!(bytes[i], b' ' | b'\t') { i += 1; }
+    if i >= bytes.len() || !matches!(bytes[i], b'-' | b'*' | b'+') { return None; }
+    i += 1;
+    let after_bullet = i;
+    while i < bytes.len() && bytes[i] == b' ' { i += 1; }
+    if i == after_bullet { return None; }
+    if i + 2 >= bytes.len() { return None; }
+    if bytes[i] != b'[' || bytes[i + 2] != b']' { return None; }
+    if !matches!(bytes[i + 1], b' ' | b'x' | b'X') { return None; }
+    i += 3;
+    let after_bracket = i;
+    while i < bytes.len() && bytes[i] == b' ' { i += 1; }
+    if i == after_bracket { return None; }
+    Some(i)
+}
+
 /// Append `- [ ] <text>` to file. Creates file (with parent dirs) if missing.
 /// Returns new content hash.
 pub fn append_task(path: &Path, text: &str) -> Result<ContentHash> {
@@ -174,5 +232,55 @@ mod tests {
         let p = write(&d, "i.md", "- [ ] one"); // no \n
         append_task(&p, "two").unwrap();
         assert_eq!(std::fs::read_to_string(&p).unwrap(), "- [ ] one\n- [ ] two\n");
+    }
+
+    #[test]
+    fn update_replaces_only_text() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "- [ ] hello world\n- [ ] keep me\n");
+        update_task_text(&p, 1, "goodbye world").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "- [ ] goodbye world\n- [ ] keep me\n"
+        );
+    }
+
+    #[test]
+    fn update_preserves_indent_and_completed_state() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "    * [x] indented done task\n");
+        update_task_text(&p, 1, "new content").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "    * [x] new content\n"
+        );
+    }
+
+    #[test]
+    fn update_preserves_crlf_line_endings() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "- [ ] one\r\n- [ ] two\r\n");
+        update_task_text(&p, 2, "TWO!").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "- [ ] one\r\n- [ ] TWO!\r\n"
+        );
+    }
+
+    #[test]
+    fn update_rejects_empty_and_multiline() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "- [ ] hi\n");
+        assert!(update_task_text(&p, 1, "   ").is_err());
+        assert!(update_task_text(&p, 1, "a\nb").is_err());
+        // File untouched.
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "- [ ] hi\n");
+    }
+
+    #[test]
+    fn update_non_task_line_errors() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "# heading\n");
+        assert!(update_task_text(&p, 1, "anything").is_err());
     }
 }

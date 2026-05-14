@@ -46,6 +46,25 @@ pub fn toggle_task(state: State<'_, AppState>, task_id: String) -> Result<()> {
     Ok(())
 }
 
+/// Replace the text of an existing task in place. Preserves indent, bullet
+/// style, checkbox state and trailing whitespace verbatim.
+#[tauri::command]
+pub fn update_task(
+    state: State<'_, AppState>,
+    task_id: String,
+    new_text: String,
+) -> Result<()> {
+    let task = {
+        let reg = state.registry.read().unwrap();
+        reg.get(&task_id).cloned().ok_or_else(|| AppError::TaskNotFound(task_id.clone()))?
+    };
+    let source = find_source_by_id(&state, &task.source_id)?;
+    let new_hash = storage::update_task_text(&task.source_file, task.line_number, &new_text)?;
+    state.ignore_hashes.register(new_hash);
+    state.registry.write().unwrap().refresh_file(&source, &task.source_file)?;
+    Ok(())
+}
+
 /// Append a task to a source. If `source_id` is omitted, falls back to
 /// `default_source_id`. Folder sources append to `inbox_file`; File sources
 /// append to the source file itself.
@@ -144,6 +163,7 @@ pub fn add_source(
         kind,
         label: resolved_label,
         project_root,
+        color: None,
     };
 
     // Persist + start watcher.
@@ -223,6 +243,7 @@ pub fn update_source(
     source_id: String,
     label: Option<String>,
     project_root: Option<PathBuf>,
+    color: Option<String>,
 ) -> Result<Source> {
     // Snapshot the source's pre-update form so we can clean up its old
     // hub mirror (which is keyed by the old label).
@@ -236,6 +257,14 @@ pub fn update_source(
         .ok_or_else(|| AppError::SourceNotFound(source_id.clone()))?;
     src.label = label;
     src.project_root = project_root;
+    // Accept only hex colors (`#rgb` / `#rrggbb` / `#rrggbbaa`); silently
+    // drop anything else so a corrupt config can't smuggle CSS into the UI.
+    src.color = color.filter(|c| {
+        let bytes = c.as_bytes();
+        matches!(bytes.len(), 4 | 7 | 9)
+            && bytes[0] == b'#'
+            && bytes[1..].iter().all(|b| b.is_ascii_hexdigit())
+    });
     let updated = src.clone();
     config::save_to(&state.config_path, &cfg)?;
     drop(cfg);

@@ -161,6 +161,7 @@ pub fn run() {
             commands::get_config,
             commands::update_config,
             commands::toggle_task,
+            commands::update_task,
             commands::add_task,
             commands::list_sources,
             commands::add_source,

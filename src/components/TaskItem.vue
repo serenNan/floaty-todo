@@ -4,11 +4,17 @@ import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
 import { api } from '../services/tauri-api';
 import { parseInline } from '../utils/inline-md';
+import { editTask } from '../composables/useTaskEditor';
 
 const props = defineProps<{ task: Task }>();
 const tasks = useTaskStore();
 
 const segments = computed(() => parseInline(props.task.text));
+
+async function onTextClick() {
+  const next = await editTask(props.task);
+  if (next !== null) await tasks.update(props.task.id, next);
+}
 
 async function openLink(href: string) {
   try { await api.openUrl(href); }
@@ -19,7 +25,11 @@ async function openLink(href: string) {
 <template>
   <label class="row" :class="{ done: task.completed }" :style="{ paddingLeft: 8 + task.indent * 12 + 'px' }">
     <input type="checkbox" :checked="task.completed" @change="tasks.toggle(task.id)" />
-    <span class="text">
+    <!-- @click.prevent.stop blocks the <label>'s default "toggle the
+         wrapped checkbox" behaviour, so clicking task text opens the
+         editor modal instead of flipping the checkbox. Inline link
+         clicks already use .prevent.stop so they keep priority. -->
+    <span class="text" @click.prevent.stop="onTextClick">
       <template v-for="(seg, i) in segments" :key="i">
         <code v-if="seg.type === 'code'" class="md-code">{{ seg.text }}</code>
         <strong v-else-if="seg.type === 'bold'">{{ seg.text }}</strong>
@@ -74,6 +84,7 @@ async function openLink(href: string) {
   font-size: 0.875rem;
   line-height: 1.4;
   word-break: break-word;
+  cursor: text;
 }
 
 .text strong { font-weight: 600; color: var(--text); }

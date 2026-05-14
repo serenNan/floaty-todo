@@ -84,7 +84,7 @@ async function clearLabel() {
         <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="13" />
       </span>
       <span class="name" :title="filePath">{{ displayLabel }}</span>
-      <span class="count">{{ counts.todo }}<span v-if="counts.done" class="done">·{{ counts.done }}✓</span></span>
+      <span class="count"><span class="count-todo">{{ counts.todo }}</span><span v-if="counts.done" class="count-done">·{{ counts.done }}</span></span>
       <button
         class="edit-btn"
         :class="{ active: editing }"
@@ -158,10 +158,10 @@ async function clearLabel() {
 
 .count {
   font-size: 0.7rem;
-  color: var(--text-muted);
   flex-shrink: 0;
 }
-.count .done { margin-left: 4px; opacity: 0.8; }
+.count .count-todo { color: var(--count-todo); }
+.count .count-done { color: var(--count-done); margin-left: 4px; }
 
 .edit-btn {
   width: 22px;

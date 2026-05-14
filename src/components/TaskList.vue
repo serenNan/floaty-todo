@@ -51,13 +51,37 @@ async function submit() {
 }
 
 // "+" button now adds a *source* (folder or file), not a task. Tasks are
-// still added by pressing Enter in the input. We pop a tiny menu so the
-// user picks the kind without us having to choose for them.
+// still added by pressing Enter in the input. The submenu opens on hover
+// (desktop) and on click (touch/keyboard fallback); a short close delay
+// lets the cursor cross the 4px gap between button and menu without the
+// menu disappearing out from under it.
 const showAddSourceMenu = ref(false);
 const addSourceWrap = ref<HTMLElement | null>(null);
+let closeTimer: number | null = null;
 
-function toggleAddSource() { showAddSourceMenu.value = !showAddSourceMenu.value; }
-function closeAddSource() { showAddSourceMenu.value = false; }
+function clearCloseTimer() {
+  if (closeTimer !== null) { window.clearTimeout(closeTimer); closeTimer = null; }
+}
+function openAddSource() {
+  clearCloseTimer();
+  showAddSourceMenu.value = true;
+}
+function closeAddSource() {
+  clearCloseTimer();
+  showAddSourceMenu.value = false;
+}
+function scheduleCloseAddSource() {
+  clearCloseTimer();
+  closeTimer = window.setTimeout(() => {
+    showAddSourceMenu.value = false;
+    closeTimer = null;
+  }, 180);
+}
+function toggleAddSource() {
+  // Click fallback for touch / keyboard: just flip the current state.
+  if (showAddSourceMenu.value) closeAddSource();
+  else openAddSource();
+}
 
 function onDocClick(e: MouseEvent) {
   if (!showAddSourceMenu.value) return;
@@ -74,6 +98,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', onDocClick);
   document.removeEventListener('keydown', onEsc);
+  clearCloseTimer();
 });
 
 async function addFolderSource() {
@@ -124,7 +149,12 @@ function toggleCollapseAll() {
           {{ s.label ?? s.path.split(/[\\/]/).filter(Boolean).pop() ?? s.path }}
         </option>
       </select>
-      <div class="add-source-wrap" ref="addSourceWrap">
+      <div
+        class="add-source-wrap"
+        ref="addSourceWrap"
+        @mouseenter="openAddSource"
+        @mouseleave="scheduleCloseAddSource"
+      >
         <button
           type="button"
           class="add-source-btn"
@@ -134,7 +164,13 @@ function toggleCollapseAll() {
         >
           <Icon name="plus" :size="16" />
         </button>
-        <div v-if="showAddSourceMenu" class="add-source-menu" @click.stop>
+        <div
+          v-if="showAddSourceMenu"
+          class="add-source-menu"
+          @click.stop
+          @mouseenter="openAddSource"
+          @mouseleave="scheduleCloseAddSource"
+        >
           <button type="button" @click="addFolderSource">
             <Icon name="folder" :size="14" />
             <span>{{ t('empty.addFolder') }}</span>
@@ -145,6 +181,14 @@ function toggleCollapseAll() {
           </button>
         </div>
       </div>
+      <button
+        type="button"
+        class="add-source-btn collapse-toggle-btn"
+        @click="toggleCollapseAll"
+        :title="allCollapsed ? t('tasks.expandAll') : t('tasks.collapseAll')"
+      >
+        <Icon :name="allCollapsed ? 'expand-all' : 'collapse-all'" :size="16" />
+      </button>
     </form>
 
     <div class="rows-wrap">
@@ -165,15 +209,10 @@ function toggleCollapseAll() {
       <button class="footer-btn icon-only" @click="$emit('openSettings')" :title="t('settings.title')">
         <Icon name="settings" :size="15" />
       </button>
-      <button
-        class="footer-btn icon-only"
-        @click="toggleCollapseAll"
-        :title="allCollapsed ? t('tasks.expandAll') : t('tasks.collapseAll')"
-      >
-        <Icon :name="allCollapsed ? 'expand-all' : 'collapse-all'" :size="15" />
-      </button>
       <span class="counts">
-        {{ t('tasks.todoCount', { n: totals.todo }) }} · {{ t('tasks.doneCount', { n: totals.done }) }}
+        <span class="count-todo">{{ t('tasks.todoCount', { n: totals.todo }) }}</span>
+        <span class="count-sep"> · </span>
+        <span class="count-done">{{ t('tasks.doneCount', { n: totals.done }) }}</span>
       </span>
       <span class="spacer"></span>
       <!-- Hub shortcuts — only show when the user has configured a hub,
@@ -337,9 +376,8 @@ function toggleCollapseAll() {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  background: var(--surface);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  padding: 0.5rem;
+  background: var(--bg);
 }
 
 .hint, .error {
@@ -396,6 +434,15 @@ function toggleCollapseAll() {
   background: color-mix(in srgb, currentColor 10%, transparent);
   border-color: color-mix(in srgb, currentColor 30%, transparent);
 }
+
+/* Collapse/expand toggle — main text colour (white on dark, dark slate on
+   light). Reuses the .add-source-btn frame; only colour is overridden. */
+.add-source-btn.collapse-toggle-btn { color: var(--text); }
+.add-source-btn.collapse-toggle-btn:hover { color: var(--text); }
+
+.counts .count-todo { color: var(--count-todo); font-weight: 500; }
+.counts .count-sep  { color: var(--text-muted); }
+.counts .count-done { color: var(--count-done); font-weight: 500; }
 
 .pin-emoji {
   font-size: 15px;

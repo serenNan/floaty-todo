@@ -86,31 +86,40 @@ pub fn open_vscode(path: &Path) -> Result<()> {
     })
 }
 
-/// Open a fresh Claude Code session at `path`. The CLI is npm-installed so on
-/// Windows it lives as `claude.cmd`; on other platforms it's a plain `claude`
-/// shell shim. Spawned inside a terminal because the CLI is interactive — a
-/// bare `Command::new("claude")` would attach to our nulled stdio and exit.
+/// Open a fresh Claude Code session at `path`. The official Windows installer
+/// drops `claude.exe` at `%USERPROFILE%\.local\bin\`, which is not always on
+/// PATH — so we resolve the absolute path and launch via PowerShell. On other
+/// platforms `claude` is a shell shim on PATH. Always spawned inside a terminal
+/// because the CLI is interactive.
 pub fn open_claude_code(path: &Path) -> Result<()> {
     let p = path.to_string_lossy().into_owned();
     if cfg!(windows) {
-        // Try Windows Terminal first so Claude lands in a real PTY.
+        // Prefer the absolute path when present; PATH-based `claude` is the fallback.
+        let claude_exe = std::env::var_os("USERPROFILE")
+            .map(|h| Path::new(&h).join(".local").join("bin").join("claude.exe"))
+            .filter(|p| p.exists());
+        let inner = match &claude_exe {
+            Some(exe) => format!(
+                "& '{}' --dangerously-skip-permissions",
+                exe.to_string_lossy().replace('\'', "''")
+            ),
+            None => "claude --dangerously-skip-permissions".to_string(),
+        };
+
+        // Windows Terminal + PowerShell — same recipe as the user's Obsidian
+        // Home.md launchers, which is the proven-working approach on this box.
         let mut wt = Command::new("wt.exe");
-        wt.args(["-d", &p, "--", "cmd.exe", "/k", "claude.cmd"]);
+        wt.args(["-d", &p, "--", "powershell.exe", "-NoExit", "-Command", &inner]);
         if spawn_detached(&mut wt).is_ok() {
             return Ok(());
         }
-        // Fallback: open Windows Terminal without the launcher (user runs `claude` manually).
-        let mut wt2 = Command::new("wt.exe");
-        wt2.args(["-d", &p]);
-        if spawn_detached(&mut wt2).is_ok() {
-            return Ok(());
-        }
-        // Last resort: cmd.exe in a new window.
+        // Fallback when wt is missing: launch PowerShell in a fresh window via `start`.
         let mut cmd = Command::new("cmd.exe");
-        cmd.args(["/c", "start", "cmd", "/k", "claude.cmd"]).current_dir(path);
+        cmd.args(["/c", "start", "powershell.exe", "-NoExit", "-Command", &inner])
+            .current_dir(path);
         spawn_detached(&mut cmd)
             .map_err(|_| AppError::CommandFailed(
-                "could not launch Claude Code (need claude CLI on PATH and either wt or cmd)".into(),
+                "could not launch Claude Code (need wt or cmd available)".into(),
             ))
     } else if cfg!(target_os = "macos") {
         // Open a new Terminal.app window and run `claude` in the chosen folder.

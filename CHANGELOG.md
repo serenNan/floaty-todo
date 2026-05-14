@@ -1,5 +1,36 @@
 # 变更日志
 
+## 2026-05-15 in-app task & source editors + UI polish round
+
+- `update_task` Tauri command + `storage::update_task_text` (atomic,
+  byte-for-byte prefix preservation, rejects empty/multi-line). Five
+  new unit tests added to `storage::tests`.
+- New `useTaskEditor` composable + `TaskEditorDialog` modal, mounted
+  at the App root next to `<ConfirmDialog />`. Single-click a task to
+  edit; live inline-markdown preview; Ctrl+B/I/E/D/K shortcuts inside
+  the textarea; caret lands at end on open (no accidental select-all
+  wipe).
+- Restore the in-header source editor inside `SourceGroup` (label /
+  project_root / set-default / remove). A new ⚙ button on the header
+  toggles it. Enter saves, Esc cancels.
+- Replace the old `⋯` button with a `grip-vertical` six-dot Lucide
+  icon. The grip is a **drag-only** handle now — a single click no
+  longer jumps to the Settings page; use the dedicated ⚙ button.
+- Move `collapse-all` / `expand-all` toggle from the footer to the
+  add-row's right edge. Icons swapped to Lucide `chevrons-down-up` /
+  `chevrons-up-down`; colour follows `var(--text)`.
+- `+` add-source menu now opens on hover (180ms close delay so the
+  cursor can cross the 4px gap); click still works as a touch /
+  keyboard fallback.
+- Colour-code counts in source / file / footer: todo = amber
+  (`--count-todo`), done = green (`--count-done`); drop the trailing
+  `✓` after done counts since colour alone now carries the meaning.
+- Default new `SourceGroup`s to collapsed on first render.
+- Fix Claude Code launcher (`shell::open_claude_code`): resolve the
+  absolute path `%USERPROFILE%\.local\bin\claude.exe` at runtime and
+  run via PowerShell, instead of trusting `claude.cmd` to be on
+  cmd.exe's PATH (it usually isn't).
+
 ## 2026-05-15 quadrant view design spec
 
 - `docs/superpowers/specs/2026-05-15-quadrant-view-design.md` (new):

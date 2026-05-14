@@ -39,6 +39,16 @@ src-tauri/        # Rust backend
 | `types` | `Task`, `AppConfig`, `ContentHash`, `hash_content` |
 | `error` | `AppError` (Io / Json / Watcher / NoVault / TaskNotFound / NotATaskLine) |
 
+## Frontend Modules
+
+| Module | Role |
+|---|---|
+| `src/types/task.ts` | `Task` and `AppConfig` TS interfaces (mirror Rust types) |
+| `src/services/tauri-api.ts` | `api` object — wraps 6 `invoke` commands, `open` dialog, `tasks-updated` listener |
+| `src/stores/tasks.ts` | `useTaskStore` — `tasks` / `loading` / `error`; `refresh` / `toggle` / `add` |
+| `src/stores/settings.ts` | `useSettingsStore` — `config`; `load` / `pickAndSetVault` |
+| `src/main.ts` | App entry — wires `createPinia()` then mounts `App` |
+
 ## Build Commands
 
 ```powershell

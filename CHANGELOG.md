@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-05-14 add frontend service layer (types, tauri-api, Pinia stores)
+
+- `src/types/task.ts`: `Task` and `AppConfig` TypeScript interfaces mirroring Rust structs
+- `src/services/tauri-api.ts`: `api` object wrapping 6 Tauri commands (`get_tasks`, `get_config`, `update_config`, `toggle_task`, `add_task`, `set_vault`), `open` dialog for vault folder picking, and `tasks-updated` event listener
+- `src/stores/tasks.ts`: `useTaskStore` Pinia store with `tasks`, `loading`, `error` state; `refresh` / `toggle` / `add` actions
+- `src/stores/settings.ts`: `useSettingsStore` with `config` state; `load` and `pickAndSetVault` actions
+- `src/main.ts`: wires Pinia (`createPinia()`) before mounting
+- `@tauri-apps/plugin-dialog` added to npm dependencies
+
 ## 2026-05-14 wire app: commands invoke_handler, tray icon, watcher bridge
 
 - `lib.rs` rewritten: 8 commands registered in `invoke_handler!` (`get_tasks`, `get_config`, `update_config`, `toggle_task`, `add_task`, `set_vault`, `show_window`, `hide_window`)

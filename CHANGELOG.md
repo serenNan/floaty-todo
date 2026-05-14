@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-14 add persistent config (config.rs)
+
+- `load_from` returns `AppConfig::default()` for missing or corrupt JSON (bricking prevention)
+- `save_to` creates parent dirs, writes pretty JSON atomically via `std::fs::write`
+- `config_file` helper composes path from Tauri's `app_config_dir`
+- 3 unit tests pass: missing file, round-trip, corrupt fallback
+- `mod config;` added to `lib.rs`
+
 ## 2026-05-14 add atomic line-level storage (storage.rs)
 
 - implemented `toggle_task` (1-indexed, CRLF-safe, `split_inclusive` line preservation) and `append_task` (creates file + `# Inbox` header if missing)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
@@ -46,6 +46,43 @@ async function submit() {
   await tasks.add(newText.value, addTargetId.value ?? undefined);
   newText.value = '';
 }
+
+// "+" button now adds a *source* (folder or file), not a task. Tasks are
+// still added by pressing Enter in the input. We pop a tiny menu so the
+// user picks the kind without us having to choose for them.
+const showAddSourceMenu = ref(false);
+const addSourceWrap = ref<HTMLElement | null>(null);
+
+function toggleAddSource() { showAddSourceMenu.value = !showAddSourceMenu.value; }
+function closeAddSource() { showAddSourceMenu.value = false; }
+
+function onDocClick(e: MouseEvent) {
+  if (!showAddSourceMenu.value) return;
+  const wrap = addSourceWrap.value;
+  if (wrap && !wrap.contains(e.target as Node)) closeAddSource();
+}
+function onEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape' && showAddSourceMenu.value) closeAddSource();
+}
+onMounted(() => {
+  document.addEventListener('click', onDocClick);
+  document.addEventListener('keydown', onEsc);
+});
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick);
+  document.removeEventListener('keydown', onEsc);
+});
+
+async function addFolderSource() {
+  closeAddSource();
+  const src = await settings.pickAndAddFolder();
+  if (src) await tasks.refresh();
+}
+async function addFileSource() {
+  closeAddSource();
+  const src = await settings.pickAndAddFile();
+  if (src) await tasks.refresh();
+}
 </script>
 
 <template>
@@ -58,9 +95,27 @@ async function submit() {
           {{ s.label ?? s.path.split(/[\\/]/).filter(Boolean).pop() ?? s.path }}
         </option>
       </select>
-      <button type="submit" :title="t('tasks.addPlaceholder', { target: addTargetLabel })">
-        <Icon name="plus" :size="16" />
-      </button>
+      <div class="add-source-wrap" ref="addSourceWrap">
+        <button
+          type="button"
+          class="add-source-btn"
+          :class="{ open: showAddSourceMenu }"
+          @click.stop="toggleAddSource"
+          :title="t('tasks.addSourceTitle')"
+        >
+          <Icon name="plus" :size="16" />
+        </button>
+        <div v-if="showAddSourceMenu" class="add-source-menu" @click.stop>
+          <button type="button" @click="addFolderSource">
+            <Icon name="folder" :size="14" />
+            <span>{{ t('empty.addFolder') }}</span>
+          </button>
+          <button type="button" @click="addFileSource">
+            <Icon name="file" :size="14" />
+            <span>{{ t('empty.addFile') }}</span>
+          </button>
+        </div>
+      </div>
     </form>
 
     <div class="rows-wrap">
@@ -153,20 +208,66 @@ async function submit() {
   text-overflow: ellipsis;
 }
 
-.add-row button {
+.add-source-wrap {
+  position: relative;
+  display: inline-block;
+}
+.add-source-btn {
   width: 32px;
+  height: 100%;
   padding: 0;
   background: var(--surface-strong);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text-muted);
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.add-row button:hover {
+.add-source-btn:hover,
+.add-source-btn.open {
   background: var(--accent-soft);
   color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.add-source-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 140px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: pop-down 140ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes pop-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.add-source-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.add-source-menu button:hover {
+  background: var(--accent-soft);
 }
 
 .rows-wrap {

@@ -1,5 +1,21 @@
 # 变更日志
 
+## 2026-05-14 add-row "+" now adds a source (was: add task)
+
+Visually the "+" sits right next to the source dropdown, so users
+expect it to add a *source*. Reading the textbox + Enter is enough to
+add a task. Repurpose the button accordingly.
+
+- `src/components/TaskList.vue`: replace the form's submit button with a
+  detached `type="button"` "+" wrapped in `.add-source-wrap`; clicking
+  pops a small drop-down menu (Folder / File) anchored under the button
+- click-outside + Esc close the menu; pop-in animation matches the
+  ConfirmDialog
+- Adding tasks: just press Enter in the input (placeholder now says
+  "…(Enter)" / "…(回车)" so the affordance is discoverable)
+- i18n: `tasks.addSourceTitle` (title for the new button); updated
+  `tasks.addPlaceholder` with the Enter hint
+
 ## 2026-05-14 pin button now uses the U+1F4CC pushpin emoji
 
 The cartoon-SVG pin didn't read as a thumbtack at 14px on Windows

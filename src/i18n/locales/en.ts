@@ -10,8 +10,9 @@ export default {
   },
   tasks: {
     loading: 'Loading…',
-    addPlaceholder: 'New task in {target}…',
+    addPlaceholder: 'New task in {target}… (Enter)',
     targetDefault: '★ {label}',
+    addSourceTitle: 'Add a new source',
     todoCount: '{n} todo',
     doneCount: '{n} done',
     refresh: 'Refresh',

@@ -10,8 +10,9 @@ export default {
   },
   tasks: {
     loading: '加载中…',
-    addPlaceholder: '新任务到 {target}…',
+    addPlaceholder: '新任务到 {target}…（回车）',
     targetDefault: '★ {label}',
+    addSourceTitle: '添加新任务源',
     todoCount: '{n} 待办',
     doneCount: '{n} 已完成',
     refresh: '刷新',

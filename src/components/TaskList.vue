@@ -38,14 +38,14 @@ async function switchVault() {
       <div v-else-if="tasks.error" class="error">{{ tasks.error }}</div>
       <div v-else-if="tasks.tasks.length === 0" class="hint">No tasks yet.</div>
       <div v-else class="rows">
-        <TaskItem v-for="t in tasks.tasks" :key="t.id" :task="t" />
+        <TaskItem v-for="t in tasks.sortedTasks" :key="t.id" :task="t" />
       </div>
     </div>
 
     <div class="footer">
       <span class="counts">
-        {{ tasks.tasks.filter(t => !t.completed).length }} todo
-        · {{ tasks.tasks.filter(t => t.completed).length }} done
+        {{ tasks.sortedTasks.filter(t => !t.completed).length }} todo
+        · {{ tasks.sortedTasks.filter(t => t.completed).length }} done
       </span>
       <button
         class="vault-switch"

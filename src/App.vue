@@ -29,7 +29,7 @@ const unlisteners: Array<() => void> = [];
 onMounted(async () => {
   await settings.load();
   if (hasVault.value) await tasks.refresh();
-  unlisteners.push(await api.onTasksUpdated(() => { tasks.refresh(); }));
+  unlisteners.push(await api.onTasksUpdated(() => { tasks.silentRefresh(); }));
   unlisteners.push(await api.onSwitchVaultRequested(async () => {
     const ok = await settings.pickAndSetVault();
     if (ok) await tasks.refresh();

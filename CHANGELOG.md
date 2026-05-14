@@ -1,5 +1,12 @@
 # 变更日志
 
+## 2026-05-14 silent refresh + sorted tasks (undone-first)
+
+- `src/stores/tasks.ts`: added `silentRefresh()` (no Loading flicker) for use after toggle / add / fs-event; `refresh()` still flips `loading` for first load and manual ↻
+- `src/stores/tasks.ts`: new `sortedTasks` computed — undone before done, then stable by `source_file` + `line_number`
+- `src/components/TaskList.vue`: renders and counts via `sortedTasks` (was `tasks`)
+- `src/App.vue`: `tasks-updated` event listener now calls `silentRefresh` instead of `refresh`
+
 ## 2026-05-14 add Vue UI (EmptyState, TaskItem, TaskList, dark-mode CSS)
 
 - `src/components/EmptyState.vue`: vault picker landing screen; calls `settings.pickAndSetVault()` then `tasks.refresh()`

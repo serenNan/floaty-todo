@@ -1,5 +1,25 @@
 # 变更日志
 
+## 2026-05-14 brand-coloured SVG icons for quick actions
+
+Replaces the placeholder Unicode glyphs (⎘ / ▷ / ◆) on quick-action
+buttons with real brand-coloured inline SVGs so the user can recognise
+each action at a glance.
+
+- `src/components/icons/QuickActionIcon.vue` (new): single Vue
+  component, `kind` prop, three inline SVGs sourced from simple-icons
+  (CC0) — VS Code folded-V mark (#0098FF), generic terminal window with
+  `>_` prompt (#4DAA7F), Anthropic eight-point sparkle (#D97757);
+  dark-mode CSS overrides nudge each colour slightly brighter for the
+  glass surface
+- `src/components/SourceGroup.vue`: renders `<QuickActionIcon>` in each
+  source-header button (was: hard-coded glyph strings); buttons gain
+  `.brand` modifier — hover ring uses the current icon's colour via
+  `color-mix(currentColor 10% / 30%)` so the icon stays legible
+- `src/views/SettingsView.vue`: same swap in the Quick actions section
+  so the checkbox list shows the real brand icons next to each label
+- No new runtime dependency — all SVGs are inline, zero network calls
+
 ## 2026-05-14 configurable quick actions (+ Claude Code) + responsive scan UX
 
 Two related polish items:

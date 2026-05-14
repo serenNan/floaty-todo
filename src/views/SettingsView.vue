@@ -6,6 +6,7 @@ import { useTheme } from '../composables/useTheme';
 import { setLocale, SUPPORTED_LOCALES, type Locale } from '../i18n';
 import { api } from '../services/tauri-api';
 import { confirm } from '../composables/useConfirm';
+import QuickActionIcon from '../components/icons/QuickActionIcon.vue';
 import type { QuickActionKind, Source } from '../types/task';
 
 defineEmits<{ back: [] }>();
@@ -34,10 +35,10 @@ const languages: Array<{ value: Locale; label: string }> = [
 /// stored order is the display order on each source header — toggling
 /// off + on re-appends, which is the cheapest way to control ordering
 /// without a separate drag-and-drop reorder UI.
-const ALL_QUICK_ACTIONS: Array<{ kind: QuickActionKind; icon: string; i18nKey: string }> = [
-  { kind: 'vscode',      icon: '⎘', i18nKey: 'source.openVscode' },
-  { kind: 'terminal',    icon: '▷', i18nKey: 'source.openTerminal' },
-  { kind: 'claude_code', icon: '◆', i18nKey: 'source.openClaudeCode' },
+const ALL_QUICK_ACTIONS: Array<{ kind: QuickActionKind; i18nKey: string }> = [
+  { kind: 'vscode',      i18nKey: 'source.openVscode' },
+  { kind: 'terminal',    i18nKey: 'source.openTerminal' },
+  { kind: 'claude_code', i18nKey: 'source.openClaudeCode' },
 ];
 
 function isActionEnabled(kind: QuickActionKind) {
@@ -194,7 +195,9 @@ async function openTerminal(s: Source) {
               :checked="isActionEnabled(a.kind)"
               @change="toggleAction(a.kind)"
             />
-            <span class="qa-icon">{{ a.icon }}</span>
+            <span class="qa-icon-wrap">
+              <QuickActionIcon :kind="a.kind" />
+            </span>
             <span class="qa-label">{{ t(a.i18nKey) }}</span>
           </label>
         </div>
@@ -538,10 +541,11 @@ select {
   accent-color: var(--accent);
   cursor: pointer;
 }
-.qa-icon {
+.qa-icon-wrap {
   width: 18px;
-  text-align: center;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .qa-label { flex: 1; }
 </style>

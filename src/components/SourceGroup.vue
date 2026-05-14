@@ -7,6 +7,7 @@ import { api } from '../services/tauri-api';
 import { confirm } from '../composables/useConfirm';
 import FileGroup from './FileGroup.vue';
 import TaskItem from './TaskItem.vue';
+import QuickActionIcon from './icons/QuickActionIcon.vue';
 
 /// Auto-collapse every FileGroup the first time we render a source whose
 /// task count exceeds this threshold. Keeps the DOM tree small enough to
@@ -114,13 +115,12 @@ async function runAction(kind: QuickActionKind) {
 
 interface ActionMeta {
   kind: QuickActionKind;
-  icon: string;
   i18n: string;
 }
 const ACTION_META: Record<QuickActionKind, ActionMeta> = {
-  vscode:      { kind: 'vscode',      icon: '⎘', i18n: 'source.openVscode' },
-  terminal:    { kind: 'terminal',    icon: '▷', i18n: 'source.openTerminal' },
-  claude_code: { kind: 'claude_code', icon: '◆', i18n: 'source.openClaudeCode' },
+  vscode:      { kind: 'vscode',      i18n: 'source.openVscode' },
+  terminal:    { kind: 'terminal',    i18n: 'source.openTerminal' },
+  claude_code: { kind: 'claude_code', i18n: 'source.openClaudeCode' },
 };
 
 const enabledActions = computed(() =>
@@ -150,10 +150,12 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
         <button
           v-for="a in enabledActions"
           :key="a.kind"
-          class="icon-btn"
+          class="icon-btn brand"
           @click="runAction(a.kind)"
           :title="t(a.i18n)"
-        >{{ a.icon }}</button>
+        >
+          <QuickActionIcon :kind="a.kind" />
+        </button>
         <button class="icon-btn" :class="{ active: editing }" @click="editing ? cancelEdit() : startEdit()" :title="t('source.edit')">⋯</button>
       </div>
     </header>
@@ -298,6 +300,9 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
   cursor: pointer;
   font-size: 0.8rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .icon-btn:hover {
   background: var(--surface);
@@ -308,6 +313,12 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
   background: var(--accent-soft);
   color: var(--accent);
   border-color: var(--border);
+}
+.icon-btn.brand:hover {
+  /* Use the brand colour as the hover background so the icon stays
+     readable against a soft tint of itself. */
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
 }
 
 .editor {

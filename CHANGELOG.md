@@ -1,5 +1,16 @@
 # 变更日志
 
+## 2026-05-15 quadrant view design spec
+
+- `docs/superpowers/specs/2026-05-15-quadrant-view-design.md` (new):
+  brainstorming output for source-internal Eisenhower quadrant
+  grouping. Quadrant is inferred from markdown header emoji
+  (🔴 / 🟡 / 🟠 / 🟢) on any header level; child headers without
+  emoji inherit parent quadrant. No sidecar, no task-row mutation —
+  preserves line_number stability and the "markdown is source of
+  truth" principle from PLAN.md. Awaiting writing-plans phase before
+  implementation
+
 ## 2026-05-15 drag-reorder whole source via the `⋯` button (pointer events)
 
 The right-most `⋯` button on each source header is now both the

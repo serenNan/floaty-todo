@@ -10,12 +10,52 @@ mod watcher;
 use crate::commands::AppState;
 use crate::registry::TaskRegistry;
 use crate::watcher::{start_watching, IgnoreHashes, WatchEvent, WatcherHandle};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
+
+pub type WatcherSlot = Arc<Mutex<Option<WatcherHandle>>>;
+
+/// Rebuild the registry from `vault` and start watching it. Replaces any
+/// existing watcher in `slot` (the old `WatcherHandle` is dropped, which stops
+/// the underlying notify backend). Runs the scan + watcher start on a
+/// background thread so the caller is not blocked.
+pub(crate) fn spawn_vault_scan_and_watcher(
+    vault: PathBuf,
+    app: AppHandle,
+    registry: Arc<RwLock<TaskRegistry>>,
+    ignore: IgnoreHashes,
+    slot: WatcherSlot,
+) {
+    std::thread::spawn(move || {
+        {
+            let mut reg = registry.write().unwrap();
+            let _ = reg.rebuild_from_vault(&vault);
+        }
+        let _ = app.emit("tasks-updated", ());
+
+        let app_for_cb = app.clone();
+        let registry_for_cb = registry.clone();
+        let handle = start_watching(&vault, ignore, move |ev| {
+            match ev {
+                WatchEvent::Changed(p) | WatchEvent::Deleted(p) => {
+                    let mut reg = registry_for_cb.write().unwrap();
+                    let _ = reg.refresh_file(&p);
+                }
+            }
+            let _ = app_for_cb.emit("tasks-updated", ());
+        });
+        if let Ok(h) = handle {
+            // Replacing Some(old) drops the previous WatcherHandle, which in
+            // turn drops the notify Debouncer — old watcher stops cleanly.
+            *slot.lock().unwrap() = Some(h);
+        }
+    });
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -38,38 +78,20 @@ pub fn run() {
             };
             app.manage(state);
 
-            // Hold the watcher handle so it lives as long as the app.
-            let watcher_slot: Arc<Mutex<Option<WatcherHandle>>> = Arc::new(Mutex::new(None));
+            // Hold the watcher handle so it lives as long as the app, and
+            // can be replaced when the user switches vault at runtime.
+            let watcher_slot: WatcherSlot = Arc::new(Mutex::new(None));
             app.manage(watcher_slot.clone());
 
-            // If vault is configured, start initial scan + watcher.
+            // If vault is already configured, kick off initial scan + watcher.
             if let Some(vault) = cfg.vault_path.clone() {
-                let app_handle = app.handle().clone();
-                let registry_clone = registry.clone();
-                let ignore_clone = ignore_hashes.clone();
-                let watcher_slot_clone = watcher_slot.clone();
-                std::thread::spawn(move || {
-                    {
-                        let mut reg = registry_clone.write().unwrap();
-                        let _ = reg.rebuild_from_vault(&vault);
-                    }
-                    let _ = app_handle.emit("tasks-updated", ());
-
-                    let app_for_cb = app_handle.clone();
-                    let registry_for_cb = registry_clone.clone();
-                    let handle = start_watching(&vault, ignore_clone, move |ev| {
-                        match ev {
-                            WatchEvent::Changed(p) | WatchEvent::Deleted(p) => {
-                                let mut reg = registry_for_cb.write().unwrap();
-                                let _ = reg.refresh_file(&p);
-                            }
-                        }
-                        let _ = app_for_cb.emit("tasks-updated", ());
-                    });
-                    if let Ok(h) = handle {
-                        *watcher_slot_clone.lock().unwrap() = Some(h);
-                    }
-                });
+                spawn_vault_scan_and_watcher(
+                    vault,
+                    app.handle().clone(),
+                    registry.clone(),
+                    ignore_hashes.clone(),
+                    watcher_slot.clone(),
+                );
             }
 
             // ----- System tray

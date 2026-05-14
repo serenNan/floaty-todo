@@ -4,6 +4,7 @@ use crate::registry::TaskRegistry;
 use crate::storage;
 use crate::types::{AppConfig, Task};
 use crate::watcher::IgnoreHashes;
+use crate::{spawn_vault_scan_and_watcher, WatcherSlot};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -55,18 +56,30 @@ pub fn add_task(state: State<'_, AppState>, text: String) -> Result<()> {
     Ok(())
 }
 
-/// Set the vault path. Caller (Vue side) should call `pickVaultFolder` first
-/// via the dialog plugin to get the path string.
+/// Set (or change) the vault path. Persists the config, then rebuilds the
+/// registry and replaces the watcher in a background thread so the Vue side
+/// returns immediately. The previous watcher (if any) is dropped, which stops
+/// the underlying notify backend.
 #[tauri::command]
-pub fn set_vault(state: State<'_, AppState>, app: AppHandle, path: PathBuf) -> Result<()> {
+pub fn set_vault(
+    state: State<'_, AppState>,
+    watcher_slot: State<'_, WatcherSlot>,
+    app: AppHandle,
+    path: PathBuf,
+) -> Result<()> {
     {
         let mut cfg = state.config.write().unwrap();
         cfg.vault_path = Some(path.clone());
         config::save_to(&state.config_path, &cfg)?;
     }
-    state.registry.write().unwrap().rebuild_from_vault(&path)?;
     let _ = app.emit("vault-changed", path.to_string_lossy().to_string());
-    let _ = app.emit("tasks-updated", ());
+    spawn_vault_scan_and_watcher(
+        path,
+        app,
+        state.registry.clone(),
+        state.ignore_hashes.clone(),
+        watcher_slot.inner().clone(),
+    );
     Ok(())
 }
 

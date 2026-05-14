@@ -375,6 +375,24 @@ pub fn set_hub_folder(
     Ok(())
 }
 
+/// Open the hub folder in one of the quick-action targets (VS Code,
+/// terminal, Claude Code). Errors if the hub isn't configured.
+#[tauri::command]
+pub fn open_hub(state: State<'_, AppState>, kind: QuickActionKind) -> Result<()> {
+    let hub = state
+        .config
+        .read()
+        .unwrap()
+        .hub_folder
+        .clone()
+        .ok_or_else(|| AppError::CommandFailed("hub folder not configured".into()))?;
+    match kind {
+        QuickActionKind::Vscode => crate::shell::open_vscode(&hub),
+        QuickActionKind::Terminal => crate::shell::open_terminal(&hub),
+        QuickActionKind::ClaudeCode => crate::shell::open_claude_code(&hub),
+    }
+}
+
 /// Resync every source into the configured hub. Used after a manual
 /// "Repair hub" click or when mirrors get out of date because the user
 /// renamed labels while the hub was unset.

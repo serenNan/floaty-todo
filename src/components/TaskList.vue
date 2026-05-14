@@ -4,8 +4,10 @@ import { useI18n } from 'vue-i18n';
 import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
 import { useSettingsStore } from '../stores/settings';
+import { api } from '../services/tauri-api';
 import SourceGroup from './SourceGroup.vue';
 import Icon from './icons/Icon.vue';
+import QuickActionIcon from './icons/QuickActionIcon.vue';
 
 defineEmits<{ openSettings: [] }>();
 
@@ -83,6 +85,15 @@ async function addFileSource() {
   const src = await settings.pickAndAddFile();
   if (src) await tasks.refresh();
 }
+
+async function openHubInVscode() {
+  try { await api.openHub('vscode'); }
+  catch (e) { console.warn('openHub vscode failed:', e); }
+}
+async function openHubInClaudeCode() {
+  try { await api.openHub('claude_code'); }
+  catch (e) { console.warn('openHub claude_code failed:', e); }
+}
 </script>
 
 <template>
@@ -139,6 +150,25 @@ async function addFileSource() {
         {{ t('tasks.todoCount', { n: totals.todo }) }} · {{ t('tasks.doneCount', { n: totals.done }) }}
       </span>
       <span class="spacer"></span>
+      <!-- Hub shortcuts — only show when the user has configured a hub,
+           otherwise they have nowhere to point. Brand-coloured so they
+           feel like the per-source action buttons above. -->
+      <template v-if="settings.hubFolder">
+        <button
+          class="footer-btn icon-only brand"
+          @click="openHubInVscode"
+          :title="t('hub.openVscode')"
+        >
+          <QuickActionIcon kind="vscode" />
+        </button>
+        <button
+          class="footer-btn icon-only brand"
+          @click="openHubInClaudeCode"
+          :title="t('hub.openClaudeCode')"
+        >
+          <QuickActionIcon kind="claude_code" />
+        </button>
+      </template>
       <button
         class="footer-btn icon-only pin-btn"
         :class="{ active: settings.alwaysOnTop }"
@@ -325,6 +355,13 @@ async function addFileSource() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Brand hover ring picks up the icon's own colour, mirroring the
+   .brand modifier used on per-source quick-action buttons. */
+.footer-btn.brand:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
 }
 
 .pin-emoji {

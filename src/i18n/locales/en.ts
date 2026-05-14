@@ -104,6 +104,10 @@ export default {
     pin: 'Pin window on top',
     unpin: 'Unpin (allow other windows above)',
   },
+  hub: {
+    openVscode: 'Open hub folder in VS Code',
+    openClaudeCode: 'Open Claude Code session on hub folder',
+  },
   confirm: {
     defaultTitle: 'Are you sure?',
     ok: 'OK',

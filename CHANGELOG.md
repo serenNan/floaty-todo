@@ -1,5 +1,24 @@
 # 变更日志
 
+## 2026-05-14 hub shortcuts in TaskList footer (VS Code / Claude Code)
+
+When a hub folder is configured, the footer now shows two brand-coloured
+buttons that open the hub folder directly — VS Code and a fresh Claude
+Code session. They sit between the counts and the pin button, on the
+same right-hand cluster as the existing per-source quick-action chips.
+
+- `src-tauri/src/commands.rs`: new `open_hub(kind: QuickActionKind)` —
+  reads `hub_folder` from state, dispatches to the matching
+  `shell::open_*`; errors out if the hub isn't configured
+- `src-tauri/src/lib.rs`: registers the command
+- `src/services/tauri-api.ts`: `openHub(kind)`
+- `src/components/TaskList.vue`: two new footer buttons gated on
+  `settings.hubFolder`, rendered via `<QuickActionIcon>` for visual
+  parity with per-source action chips; `.footer-btn.brand` modifier
+  reuses the `color-mix(currentColor …)` hover ring from `SourceGroup`
+- `src/i18n/locales/{en,zh}.ts`: `hub.openVscode` / `hub.openClaudeCode`
+  tooltip strings
+
 ## 2026-05-14 source kind icons → real emoji that flip on expand/collapse
 
 Replace the outlined folder / file SVGs on each source header with real

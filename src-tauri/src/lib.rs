@@ -175,6 +175,7 @@ pub fn run() {
             commands::set_enabled_quick_actions,
             commands::set_hub_folder,
             commands::resync_hub,
+            commands::open_hub,
             commands::open_url,
             commands::set_always_on_top,
             commands::show_window,

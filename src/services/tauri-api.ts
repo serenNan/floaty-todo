@@ -52,6 +52,7 @@ export const api = {
 
   setHubFolder: (path: string | null) => invoke<void>('set_hub_folder', { path }),
   resyncHub: () => invoke<void>('resync_hub'),
+  openHub: (kind: QuickActionKind) => invoke<void>('open_hub', { kind }),
 
   pickFolder: async (): Promise<string | null> => {
     const sel = await open({ directory: true, multiple: false });

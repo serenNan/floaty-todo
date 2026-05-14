@@ -104,6 +104,10 @@ export default {
     pin: '钉住窗口（始终置顶）',
     unpin: '取消置顶（允许其他窗口覆盖）',
   },
+  hub: {
+    openVscode: '用 VS Code 打开中枢文件夹',
+    openClaudeCode: '在中枢文件夹启动 Claude Code 会话',
+  },
   confirm: {
     defaultTitle: '确认操作',
     ok: '确定',

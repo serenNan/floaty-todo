@@ -42,10 +42,19 @@ mod tests {
 
     #[test]
     fn save_then_load_roundtrip() {
+        use crate::types::{Source, SourceKind};
         let d = TempDir::new().unwrap();
         let p = d.path().join("config.json");
+        let vault = d.path().join("vault");
         let mut cfg = AppConfig::default();
-        cfg.vault_path = Some(d.path().join("vault"));
+        cfg.sources.push(Source {
+            id: Source::id_for(&vault),
+            path: vault,
+            kind: SourceKind::Folder,
+            label: Some("Vault".into()),
+            project_root: None,
+        });
+        cfg.default_source_id = Some(cfg.sources[0].id.clone());
         cfg.always_on_top = false;
         save_to(&p, &cfg).unwrap();
         let got = load_from(&p).unwrap();

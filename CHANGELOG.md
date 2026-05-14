@@ -1,5 +1,29 @@
 # 变更日志
 
+## 2026-05-14 multi-source aggregation (folder + single-file sources)
+
+Replaces the single-vault model with a user-configurable list of task sources. Each source is either a recursive folder scan or a single `.md` file, with an optional `project_root` for future "Open in VS Code / terminal" actions.
+
+### Backend (Rust)
+- `types.rs`: added `Source` (`id`/`path`/`kind`/`label`/`project_root`) and `SourceKind` (`Folder`/`File`); `Task` now carries `source_id`; `AppConfig` now holds `sources: Vec<Source>` + `default_source_id: Option<String>` (vault_path removed, no migration since v0.1 was not released)
+- `error.rs`: `NoVault` → `NoSources`; added `SourceNotFound` / `DuplicateSource` / `InvalidSourcePath` / `CommandFailed`
+- `parser.rs`: `parse_file(path)` → `parse_file(path, source_id)`; each `Task` propagates `source_id`
+- `registry.rs`: rewrote — `rebuild_from_sources(&[Source])`, `rebuild_source(&Source)`, `refresh_file(&Source, &Path)`; keyed by `(source_id, canonical_path)` so two sources covering the same file stay independent; folder sources keep walkdir behaviour, file sources scope to their single target
+- `watcher.rs`: `start_watching` → `start_watching_source(&Source, …)`; folder = recursive, file = parent-dir non-recursive + filename filter (canonical compare)
+- `commands.rs`: new — `list_sources` / `add_source` / `remove_source` / `update_source` / `set_default_source`; `add_task(text, source_id?)` (omitted ⇒ uses `default_source_id`); `set_vault` removed; `toggle_task` resolves the source via `Task.source_id` and refreshes scoped to that source
+- `lib.rs`: `WatcherSlot` (one) → `WatcherSlots = Arc<Mutex<HashMap<source_id, WatcherHandle>>>`; setup spawns one scan+watcher per source; tray menu item "Switch vault folder…" → "Manage sources…" (emits `request-manage-sources`)
+- 35 unit tests pass; added: `task_carries_source_id`, `file_source_collects_only_target_file`, `multi_source_aggregates`, `file_source_ignores_sibling_changes`, `file_source_only_fires_for_target_file`
+
+### Frontend
+- `src/types/task.ts`: mirrors Rust — `Source` / `SourceKind` / new `AppConfig` shape; `Task.source_id` added
+- `src/services/tauri-api.ts`: drops `setVault` / `pickVaultFolder`; adds `listSources` / `addSource` / `removeSource` / `updateSource` / `setDefaultSource`, `pickFolder` / `pickMarkdownFile`, and listeners for `sources-changed` / `request-manage-sources`
+- `src/stores/settings.ts`: replaced `pickAndSetVault` with `pickAndAddFolder` / `pickAndAddFile`; exposes `sources` / `hasSources` / `defaultSourceId` computeds and source CRUD helpers
+- `src/stores/tasks.ts`: `add(text)` → `add(text, sourceId?)`
+- `src/App.vue`: `hasVault` → `hasSources`; subscribes to `sources-changed` + `request-manage-sources`
+- `src/components/EmptyState.vue`: two-button onboarding (📁 Folder… / 📄 File…) via `pickAndAddFolder` / `pickAndAddFile`
+- `src/components/TaskList.vue`: footer chips become "📁+" / "📄+ N sources" quick-adders; QuickAdd input gains an inline source dropdown so the user can pick the destination per task (defaults to `default_source_id`)
+- v0.2 source-grouped rendering + per-source quick-action buttons (VS Code / terminal) land in the next commits — current TaskList still renders the flat sorted list
+
 ## 2026-05-14 silent refresh + sorted tasks (undone-first)
 
 - `src/stores/tasks.ts`: added `silentRefresh()` (no Loading flicker) for use after toggle / add / fs-event; `refresh()` still flips `loading` for first load and manual ↻

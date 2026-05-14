@@ -5,9 +5,14 @@ import { useTaskStore } from '../stores/tasks';
 const settings = useSettingsStore();
 const tasks = useTaskStore();
 
-async function pick() {
-  const ok = await settings.pickAndSetVault();
-  if (ok) await tasks.refresh();
+async function addFolder() {
+  const src = await settings.pickAndAddFolder();
+  if (src) await tasks.refresh();
+}
+
+async function addFile() {
+  const src = await settings.pickAndAddFile();
+  if (src) await tasks.refresh();
 }
 </script>
 
@@ -15,8 +20,11 @@ async function pick() {
   <div class="empty-wrap">
     <div class="empty-card">
       <h2>Floaty Todo</h2>
-      <p>Pick an Obsidian vault folder.<br>The app will scan all <code>.md</code> tasks inside.</p>
-      <button @click="pick">Choose folder…</button>
+      <p>Add your first todo source.<br>A folder (recursive) or a single <code>.md</code> file.</p>
+      <div class="actions">
+        <button @click="addFolder">📁 Folder…</button>
+        <button @click="addFile">📄 File…</button>
+      </div>
     </div>
   </div>
 </template>
@@ -64,8 +72,14 @@ async function pick() {
   color: var(--accent);
 }
 
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
 .empty-card button {
-  padding: 0.5rem 1.2rem;
+  padding: 0.5rem 1.1rem;
   background: var(--surface-strong);
   border: 1px solid var(--border-strong);
   border-radius: 8px;

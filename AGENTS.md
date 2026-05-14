@@ -22,32 +22,44 @@ src-tauri/        # Rust backend
   src/config.rs   # AppConfig load/save (JSON, tolerant)
   src/registry.rs # In-memory TaskRegistry (vault scan + per-file refresh)
   src/watcher.rs  # Debounced fs watcher + IgnoreHashes loop prevention
-  tauri.conf.json # App config (productName, identifier, devUrl, window 380×600 alwaysOnTop)
+  tauri.conf.json # App config (productName, identifier, devUrl, window 340×520 transparent decorations:false skipTaskbar alwaysOnTop)
   Cargo.toml      # Rust deps (crate name: floaty-todo, lib: floaty_todo_lib)
 ```
+
+## Data Model
+
+Multi-source aggregation (v0.2): user configures **N task sources**, each one of:
+- **Folder source** — recursive `.md` scan under `path`
+- **File source** — one specific `.md` file (watcher tracks parent dir, filters by filename)
+
+Each `Source` carries `id` (8-byte hex sha256 of canonical path), `path`, `kind`, optional `label`, and optional `project_root` (used by `open_in_vscode` / `open_in_terminal`; defaults: Folder→`path`, File→`path.parent()`).
+
+Tasks reference their source via `Task.source_id`. The registry keys files by `(source_id, canonical_path)` so a file appearing under two sources stays independent.
 
 ## Rust Modules
 
 | Module | Role |
 |---|---|
-| `commands` | `AppState` struct + all `#[tauri::command]` fns; wired into `invoke_handler!` in Task 9 |
-| `registry` | `TaskRegistry` — HashMap-backed index; `rebuild_from_vault` + `refresh_file` |
-| `watcher` | `start_watching` + `IgnoreHashes` (hash-based write loop prevention) |
+| `commands` | `AppState` + Tauri commands: `get_tasks`/`toggle_task`/`add_task`, source CRUD (`list_sources`/`add_source`/`remove_source`/`update_source`/`set_default_source`), window control |
+| `registry` | `TaskRegistry` keyed by `(source_id, canonical_path)`; `rebuild_from_sources` / `rebuild_source` / `refresh_file(source, file)` |
+| `watcher` | `start_watching_source` (Folder = recursive, File = parent dir + filename filter) + `IgnoreHashes` for write-loop prevention; one `WatcherHandle` per source in `WatcherSlots: Arc<Mutex<HashMap<source_id, WatcherHandle>>>` |
 | `storage` | `toggle_task` / `append_task` — atomic writes via `tempfile::NamedTempFile` |
 | `config` | `load_from` / `save_to` / `config_file` — JSON, corrupt-tolerant |
-| `parser` | `parse_line` / `parse_file` — regex, stable SHA-256 task IDs |
-| `types` | `Task`, `AppConfig`, `ContentHash`, `hash_content` |
-| `error` | `AppError` (Io / Json / Watcher / NoVault / TaskNotFound / NotATaskLine) |
+| `parser` | `parse_line` / `parse_file(path, source_id)` — regex, stable SHA-256 task IDs |
+| `types` | `Task` (with `source_id`), `Source` / `SourceKind` (Folder/File), `AppConfig` (`sources` Vec + `default_source_id`), `ContentHash` |
+| `error` | `AppError` (Io/Json/Watcher/NoSources/SourceNotFound/DuplicateSource/InvalidSourcePath/TaskNotFound/NotATaskLine/CommandFailed) |
 
 ## Frontend Modules
 
 | Module | Role |
 |---|---|
-| `src/types/task.ts` | `Task` and `AppConfig` TS interfaces (mirror Rust types) |
-| `src/services/tauri-api.ts` | `api` object — wraps 6 `invoke` commands, `open` dialog, `tasks-updated` listener |
-| `src/stores/tasks.ts` | `useTaskStore` — `tasks` / `loading` / `error`; `refresh` / `toggle` / `add` |
-| `src/stores/settings.ts` | `useSettingsStore` — `config`; `load` / `pickAndSetVault` |
+| `src/types/task.ts` | `Task` / `Source` / `SourceKind` / `AppConfig` TS interfaces (mirror Rust) |
+| `src/services/tauri-api.ts` | `api` object — wraps `invoke` commands + dialog pickers (`pickFolder` / `pickMarkdownFile`) + event listeners (`tasks-updated`, `sources-changed`, `request-manage-sources`) |
+| `src/stores/tasks.ts` | `useTaskStore` — `tasks` / `sortedTasks` / `loading` / `error`; `refresh` / `silentRefresh` / `toggle` / `add(text, sourceId?)` |
+| `src/stores/settings.ts` | `useSettingsStore` — `config` / `sources` / `hasSources` / `defaultSourceId`; `addSource` / `removeSource` / `updateSource` / `setDefaultSource` / `pickAndAddFolder` / `pickAndAddFile` |
 | `src/main.ts` | App entry — wires `createPinia()` then mounts `App` |
+| `src/composables/useTheme.ts` | Theme composable — `currentTheme` / `effectiveTheme` / `setTheme`; localStorage `floaty.theme`, system media query listener |
+| `src/components/TitleBar.vue` | Custom 32px title bar — drag region, theme cycle (☀/🌙/🖥), minimize, hide-to-tray close |
 
 ## Build Commands
 

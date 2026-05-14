@@ -9,8 +9,9 @@ mod watcher;
 
 use crate::commands::AppState;
 use crate::registry::TaskRegistry;
-use crate::watcher::{start_watching, IgnoreHashes, WatchEvent, WatcherHandle};
-use std::path::PathBuf;
+use crate::types::Source;
+use crate::watcher::{start_watching_source, IgnoreHashes, WatchEvent, WatcherHandle};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{
     menu::{Menu, MenuItem},
@@ -18,41 +19,40 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 
-pub type WatcherSlot = Arc<Mutex<Option<WatcherHandle>>>;
+/// One watcher per source. Removing an entry drops the `WatcherHandle`, which
+/// stops the underlying notify backend cleanly.
+pub type WatcherSlots = Arc<Mutex<HashMap<String, WatcherHandle>>>;
 
-/// Rebuild the registry from `vault` and start watching it. Replaces any
-/// existing watcher in `slot` (the old `WatcherHandle` is dropped, which stops
-/// the underlying notify backend). Runs the scan + watcher start on a
-/// background thread so the caller is not blocked.
-pub(crate) fn spawn_vault_scan_and_watcher(
-    vault: PathBuf,
+/// Spawn an initial scan + watcher for one source. Replaces any existing entry
+/// in `slots` for the same source id.
+pub(crate) fn spawn_source_scan_and_watcher(
+    source: Source,
     app: AppHandle,
     registry: Arc<RwLock<TaskRegistry>>,
     ignore: IgnoreHashes,
-    slot: WatcherSlot,
+    slots: WatcherSlots,
 ) {
     std::thread::spawn(move || {
         {
             let mut reg = registry.write().unwrap();
-            let _ = reg.rebuild_from_vault(&vault);
+            reg.rebuild_source(&source);
         }
         let _ = app.emit("tasks-updated", ());
 
         let app_for_cb = app.clone();
         let registry_for_cb = registry.clone();
-        let handle = start_watching(&vault, ignore, move |ev| {
+        let src_for_cb = source.clone();
+        let handle = start_watching_source(&source, ignore, move |ev| {
             match ev {
                 WatchEvent::Changed(p) | WatchEvent::Deleted(p) => {
                     let mut reg = registry_for_cb.write().unwrap();
-                    let _ = reg.refresh_file(&p);
+                    let _ = reg.refresh_file(&src_for_cb, &p);
                 }
             }
             let _ = app_for_cb.emit("tasks-updated", ());
         });
         if let Ok(h) = handle {
-            // Replacing Some(old) drops the previous WatcherHandle, which in
-            // turn drops the notify Debouncer — old watcher stops cleanly.
-            *slot.lock().unwrap() = Some(h);
+            slots.lock().unwrap().insert(source.id.clone(), h);
         }
     });
 }
@@ -67,7 +67,7 @@ pub fn run() {
             let config_path = config::config_file(&app_config_dir);
             let cfg = config::load_from(&config_path).unwrap_or_default();
 
-            // ----- Registry: rebuild if vault is set (in background)
+            // ----- Registry + watcher slots
             let registry = Arc::new(RwLock::new(TaskRegistry::new()));
             let ignore_hashes = IgnoreHashes::new();
             let state = AppState {
@@ -78,42 +78,37 @@ pub fn run() {
             };
             app.manage(state);
 
-            // Hold the watcher handle so it lives as long as the app, and
-            // can be replaced when the user switches vault at runtime.
-            let watcher_slot: WatcherSlot = Arc::new(Mutex::new(None));
-            app.manage(watcher_slot.clone());
+            let watcher_slots: WatcherSlots = Arc::new(Mutex::new(HashMap::new()));
+            app.manage(watcher_slots.clone());
 
-            // If vault is already configured, kick off initial scan + watcher.
-            if let Some(vault) = cfg.vault_path.clone() {
-                spawn_vault_scan_and_watcher(
-                    vault,
+            // Kick off scan + watcher for every configured source.
+            for source in cfg.sources.iter().cloned() {
+                spawn_source_scan_and_watcher(
+                    source,
                     app.handle().clone(),
                     registry.clone(),
                     ignore_hashes.clone(),
-                    watcher_slot.clone(),
+                    watcher_slots.clone(),
                 );
             }
 
             // ----- System tray
             let show_item = MenuItem::with_id(app, "show", "Show window", true, None::<&str>)?;
             let hide_item = MenuItem::with_id(app, "hide", "Hide window", true, None::<&str>)?;
-            let switch_vault_item = MenuItem::with_id(app, "switch_vault", "Switch vault folder…", true, None::<&str>)?;
+            let manage_sources_item = MenuItem::with_id(app, "manage_sources", "Manage sources…", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_item, &hide_item, &switch_vault_item, &quit_item])?;
+            let menu = Menu::with_items(app, &[&show_item, &hide_item, &manage_sources_item, &quit_item])?;
 
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                // Tauri 2 defaults to opening the menu on left-click; we want
-                // left-click to toggle the window and right-click to open the
-                // menu (Windows-conventional tray behaviour).
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => toggle_window(app, true),
                     "hide" => toggle_window(app, false),
-                    "switch_vault" => {
+                    "manage_sources" => {
                         toggle_window(app, true);
-                        let _ = app.emit("request-switch-vault", ());
+                        let _ = app.emit("request-manage-sources", ());
                     }
                     "quit" => app.exit(0),
                     _ => {}
@@ -134,8 +129,7 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Intercept window close → hide to tray instead of exit. User must
-            // pick "Quit" from the tray menu (or kill the process) to exit.
+            // Intercept window close → hide to tray.
             if let Some(w) = app.get_webview_window("main") {
                 let w_clone = w.clone();
                 w.on_window_event(move |event| {
@@ -154,7 +148,11 @@ pub fn run() {
             commands::update_config,
             commands::toggle_task,
             commands::add_task,
-            commands::set_vault,
+            commands::list_sources,
+            commands::add_source,
+            commands::remove_source,
+            commands::update_source,
+            commands::set_default_source,
             commands::show_window,
             commands::hide_window,
         ])

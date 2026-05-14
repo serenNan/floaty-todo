@@ -23,7 +23,7 @@ pub fn parse_line(line: &str) -> Option<ParsedTask> {
     })
 }
 
-pub fn parse_file(path: &Path) -> Result<Vec<Task>> {
+pub fn parse_file(path: &Path, source_id: &str) -> Result<Vec<Task>> {
     let raw = std::fs::read(path)?;
     // Strip UTF-8 BOM if present
     let content = if raw.starts_with(&[0xEF, 0xBB, 0xBF]) { &raw[3..] } else { &raw[..] };
@@ -43,6 +43,7 @@ pub fn parse_file(path: &Path) -> Result<Vec<Task>> {
                 source_file: abs.clone(),
                 line_number,
                 indent: p.indent,
+                source_id: source_id.to_string(),
             });
         }
     }
@@ -110,7 +111,7 @@ mod tests {
     #[test]
     fn parse_file_returns_tasks_with_line_numbers() {
         let f = write_tmp("# title\n- [ ] one\nrandom line\n- [x] two\n");
-        let tasks = parse_file(f.path()).unwrap();
+        let tasks = parse_file(f.path(), "test-src").unwrap();
         assert_eq!(tasks.len(), 2);
         assert_eq!(tasks[0].text, "one");
         assert_eq!(tasks[0].line_number, 2);
@@ -125,7 +126,7 @@ mod tests {
         bytes.extend_from_slice(b"- [ ] bom task\n");
         let mut f = tempfile::Builder::new().suffix(".md").tempfile().unwrap();
         f.write_all(&bytes).unwrap();
-        let tasks = parse_file(f.path()).unwrap();
+        let tasks = parse_file(f.path(), "test-src").unwrap();
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].text, "bom task");
         assert_eq!(tasks[0].line_number, 1);
@@ -134,8 +135,15 @@ mod tests {
     #[test]
     fn stable_id_for_same_file_and_line() {
         let f = write_tmp("- [ ] x\n");
-        let a = parse_file(f.path()).unwrap();
-        let b = parse_file(f.path()).unwrap();
+        let a = parse_file(f.path(), "test-src").unwrap();
+        let b = parse_file(f.path(), "test-src").unwrap();
         assert_eq!(a[0].id, b[0].id);
+    }
+
+    #[test]
+    fn task_carries_source_id() {
+        let f = write_tmp("- [ ] x\n");
+        let tasks = parse_file(f.path(), "my-source").unwrap();
+        assert_eq!(tasks[0].source_id, "my-source");
     }
 }

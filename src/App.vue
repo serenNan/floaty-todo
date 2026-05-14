@@ -10,7 +10,7 @@ import TaskList from './components/TaskList.vue';
 const settings = useSettingsStore();
 const tasks = useTaskStore();
 const { currentTheme, setTheme } = useTheme();
-const hasVault = computed(() => !!settings.config?.vault_path);
+const hasSources = computed(() => settings.hasSources);
 
 const themeIcon = computed(() =>
   currentTheme.value === 'light' ? '☀' :
@@ -28,11 +28,15 @@ const unlisteners: Array<() => void> = [];
 
 onMounted(async () => {
   await settings.load();
-  if (hasVault.value) await tasks.refresh();
+  if (hasSources.value) await tasks.refresh();
   unlisteners.push(await api.onTasksUpdated(() => { tasks.silentRefresh(); }));
-  unlisteners.push(await api.onSwitchVaultRequested(async () => {
-    const ok = await settings.pickAndSetVault();
-    if (ok) await tasks.refresh();
+  unlisteners.push(await api.onSourcesChanged(async () => {
+    await settings.load();
+    await tasks.silentRefresh();
+  }));
+  unlisteners.push(await api.onManageSourcesRequested(async () => {
+    // TODO(v0.2 UI): open source manager panel. For now, just refresh.
+    await settings.load();
   }));
 });
 
@@ -43,7 +47,7 @@ onUnmounted(() => { unlisteners.forEach(u => u()); });
   <main>
     <div class="content">
       <Transition name="fade" mode="out-in">
-        <EmptyState v-if="!hasVault" key="empty" />
+        <EmptyState v-if="!hasSources" key="empty" />
         <TaskList v-else key="list" />
       </Transition>
     </div>

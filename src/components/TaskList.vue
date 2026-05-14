@@ -7,29 +7,49 @@ import TaskItem from './TaskItem.vue';
 const tasks = useTaskStore();
 const settings = useSettingsStore();
 const newText = ref('');
+const selectedSourceId = ref<string | null>(null);
 
-const vaultName = computed(() => {
-  const p = settings.config?.vault_path;
-  if (!p) return '(none)';
-  return p.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? p;
+const sourcesSummary = computed(() => {
+  const n = settings.sources.length;
+  return n === 1 ? '1 source' : `${n} sources`;
+});
+
+const addTargetId = computed(() => selectedSourceId.value ?? settings.defaultSourceId);
+
+const addTargetLabel = computed(() => {
+  const id = addTargetId.value;
+  if (!id) return '(none)';
+  const s = settings.sources.find(x => x.id === id);
+  if (!s) return '(missing)';
+  return s.label ?? s.path.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? s.path;
 });
 
 async function submit() {
   if (!newText.value.trim()) return;
-  await tasks.add(newText.value);
+  await tasks.add(newText.value, addTargetId.value ?? undefined);
   newText.value = '';
 }
 
-async function switchVault() {
-  const ok = await settings.pickAndSetVault();
-  if (ok) await tasks.refresh();
+async function addFolder() {
+  const src = await settings.pickAndAddFolder();
+  if (src) await tasks.refresh();
+}
+async function addFile() {
+  const src = await settings.pickAndAddFile();
+  if (src) await tasks.refresh();
 }
 </script>
 
 <template>
   <div class="list">
     <form class="add-row" @submit.prevent="submit">
-      <input v-model="newText" placeholder="Add task…" />
+      <input v-model="newText" :placeholder="`Add task → ${addTargetLabel}`" />
+      <select v-model="selectedSourceId" class="source-select" title="Target source for new task">
+        <option :value="null">{{ addTargetLabel }} (default)</option>
+        <option v-for="s in settings.sources" :key="s.id" :value="s.id">
+          {{ s.label ?? s.path }}
+        </option>
+      </select>
       <button type="submit" title="Add task">+</button>
     </form>
 
@@ -49,9 +69,14 @@ async function switchVault() {
       </span>
       <button
         class="vault-switch"
-        :title="`Vault: ${settings.config?.vault_path ?? '(none)'}\nClick to switch folder`"
-        @click="switchVault"
-      >📁 {{ vaultName }} ▾</button>
+        title="Add folder source"
+        @click="addFolder"
+      >📁+</button>
+      <button
+        class="vault-switch"
+        title="Add file source"
+        @click="addFile"
+      >📄+ {{ sourcesSummary }}</button>
       <button class="refresh" @click="tasks.refresh" title="Refresh (re-read all .md files)">↻</button>
     </div>
   </div>
@@ -91,6 +116,17 @@ async function switchVault() {
 
 .add-row input::placeholder {
   color: var(--text-muted);
+}
+
+.source-select {
+  max-width: 80px;
+  padding: 0.4rem 0.3rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
 }
 
 .add-row button {

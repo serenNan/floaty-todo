@@ -9,12 +9,20 @@ pub enum AppError {
     Json(#[from] serde_json::Error),
     #[error("watcher error: {0}")]
     Watcher(#[from] notify::Error),
-    #[error("config not initialized: vault_path is None")]
-    NoVault,
+    #[error("no sources configured")]
+    NoSources,
+    #[error("source not found: {0}")]
+    SourceNotFound(String),
+    #[error("source already exists: {0}")]
+    DuplicateSource(String),
+    #[error("invalid source path: {0}")]
+    InvalidSourcePath(String),
     #[error("task not found: {0}")]
     TaskNotFound(String),
     #[error("line {line} in {path} is not a task line")]
     NotATaskLine { path: String, line: usize },
+    #[error("command failed: {0}")]
+    CommandFailed(String),
 }
 
 pub type Result<T> = std::result::Result<T, AppError>;

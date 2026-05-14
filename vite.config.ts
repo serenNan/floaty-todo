@@ -14,14 +14,16 @@ export default defineConfig(async () => ({
   clearScreen: false,
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
-    port: 1420,
+    // Use 1422 (not 1420) to avoid colliding with WishTalk's Tauri dev server
+    // which uses the Tauri default 1420. See README / commit history.
+    port: 1422,
     strictPort: true,
     host: host || false,
     hmr: host
       ? {
           protocol: "ws",
           host,
-          port: 1421,
+          port: 1423,
         }
       : undefined,
     watch: {

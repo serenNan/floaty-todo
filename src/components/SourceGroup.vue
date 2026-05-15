@@ -475,6 +475,7 @@ const colorStyle = computed(() =>
           :key="String(g.quadrant)"
           :quadrant="g.quadrant"
           :tasks="g.tasks"
+          :source-id="source.id"
           :collapse-token="collapseQuadrantToken"
           :expand-token="expandQuadrantToken"
           :persistence-key="`${source.id}::${source.path}::${g.quadrant ?? 'unsorted'}`"
@@ -513,9 +514,15 @@ const colorStyle = computed(() =>
 .group:hover { border-color: var(--border-strong); }
 .group:last-child { margin-bottom: 0; }
 
-/* Colored variant: left-edge accent stripe via inset shadow (no layout
-   shift) + tinted header background. --src-color is bound by inline style. */
+/* Colored variant: left-edge accent stripe + a body-wide tint so the
+   stripe doesn't look brighter in the expanded body section than in the
+   header band. Dark theme's --surface is rgba(.., .72) — without the
+   tint, any src-color band gets visually dimmed by the surrounding
+   half-transparent dark surface. Header carries a slightly stronger
+   tint so it still reads as the header. --src-color is bound by inline
+   style on .group. */
 .group.colored {
+  background: color-mix(in srgb, var(--src-color) 7%, var(--surface));
   box-shadow: inset 4px 0 0 var(--src-color), var(--card-shadow);
   border-color: color-mix(in srgb, var(--src-color) 30%, var(--border));
 }
@@ -523,10 +530,10 @@ const colorStyle = computed(() =>
   border-color: color-mix(in srgb, var(--src-color) 55%, var(--border-strong));
 }
 .group.colored .group-head {
-  background: color-mix(in srgb, var(--src-color) 10%, var(--surface-strong));
+  background: color-mix(in srgb, var(--src-color) 16%, var(--surface));
 }
 .group.colored .group-head:hover {
-  background: color-mix(in srgb, var(--src-color) 18%, var(--surface-strong));
+  background: color-mix(in srgb, var(--src-color) 26%, var(--surface));
 }
 
 .group-head {

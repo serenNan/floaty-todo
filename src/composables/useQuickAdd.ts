@@ -5,6 +5,10 @@ export interface QuickAddOptions {
   /// Source initially selected in the dialog. Required — the entry point is
   /// always a specific source's "+" button, so we always have one.
   sourceId: string;
+  /// Initial quadrant. Distinguish *not provided* (key absent → dialog falls
+  /// back to its own DEFAULT_QUADRANT) from *explicit null* (unsorted), since
+  /// per-quadrant entry points want to lock the picker to that quadrant.
+  quadrant?: Quadrant | null;
 }
 
 export interface QuickAddResult {

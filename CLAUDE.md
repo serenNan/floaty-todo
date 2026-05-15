@@ -1,5 +1,7 @@
 # Floaty Todo — 项目说明
 
+> **开发流程 / Skill 约定见 [`CONTRIBUTING.md`](CONTRIBUTING.md)** —— 内置 `todo` skill（管待办，进 `./TODO.md`）、需自行安装的 `superpowers` 插件、以及 brainstorm → 计划 → TDD → 验证的开发流程。改动本项目前请遵循。
+
 ## 技术栈
 
 - **前端：** Vue 3 + TypeScript、Vite 6、Pinia、vue-i18n（en/zh）

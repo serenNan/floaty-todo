@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-05-15 新增 CONTRIBUTING.md 与项目级 todo skill
+
+- 新增 `CONTRIBUTING.md`：开发流程与 Claude Code skill 约定（todo skill
+  内置说明、superpowers 插件安装、各 skill 用途、brainstorm→计划→TDD→
+  验证的开发流程、代码风格）
+- `.claude/skills/todo/`：内置 todo skill 实体，随仓库版本管理
+- `.claude/skills/README.md`：目录说明，指向 CONTRIBUTING.md
+- `CLAUDE.md` 顶部加 CONTRIBUTING.md 指针
+
 ## 2026-05-15 重写 README
 
 - 把默认 Tauri 脚手架 README 替换为完整项目介绍（定位、功能特性、

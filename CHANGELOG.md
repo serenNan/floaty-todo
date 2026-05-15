@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-15 新增 translateKeyEvent 键盘事件翻译函数
+
+- 新增 `src/utils/hotkey.ts`：`translateKeyEvent` 把浏览器 KeyboardEvent
+  翻译为 Tauri accelerator 字符串（如 "Ctrl+Shift+T"），纯函数无副作用
+- 新增 `src/utils/hotkey.test.ts`：7 个单测覆盖单键/多修饰键/纯修饰键/
+  功能键/Escape/不支持主键，严格 TDD
+- 为「全局快捷键」功能的设置页录制 UI 做准备
+
 ## 2026-05-15 搭建 Vitest 前端测试框架
 
 - `npm install -D vitest`：添加 vitest 作为前端单测运行器（项目首个前端测试框架）

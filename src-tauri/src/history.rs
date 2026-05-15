@@ -53,6 +53,10 @@ pub enum HistoryAction {
         before: LineSnapshot,
         after: LineSnapshot,
     },
+    Delete {
+        task_id: String,
+        before: LineSnapshot,
+    },
     ExternalEdit {
         diff_summary: DiffSummary,
         size_bytes_delta: i64,
@@ -511,6 +515,9 @@ pub fn apply_reverse(event: &HistoryEvent) -> Result<Option<crate::types::Conten
             storage::remove_line_if_hash(&event.file, after.line, &after.hash)?;
             Some(storage::insert_line_at(&event.file, before.line, &before.raw)?)
         }
+        HistoryAction::Delete { before, .. } => {
+            Some(storage::insert_line_at(&event.file, before.line, &before.raw)?)
+        }
         HistoryAction::ExternalEdit { .. } => None,
     };
     Ok(result)
@@ -533,6 +540,11 @@ pub fn apply_forward(event: &HistoryEvent) -> Result<Option<crate::types::Conten
             storage::remove_line_if_hash(&event.file, before.line, &before.hash)?;
             Some(storage::insert_line_at(&event.file, after.line, &after.raw)?)
         }
+        HistoryAction::Delete { before, .. } => Some(storage::remove_line_if_hash(
+            &event.file,
+            before.line,
+            &before.hash,
+        )?),
         HistoryAction::ExternalEdit { .. } => None,
     };
     Ok(result)
@@ -714,6 +726,47 @@ mod tests {
             std::fs::read_to_string(&file).unwrap(),
             "- [ ] existing\n- [ ] added\n"
         );
+    }
+
+    #[test]
+    fn apply_forward_delete_removes_line_and_reverse_reinserts_it() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("todo.md");
+        std::fs::write(&file, "- [ ] keep\n- [ ] gone\n").unwrap();
+        let mut event = event(
+            "01",
+            HistoryAction::Delete {
+                task_id: "task-a".to_string(),
+                before: line(2, "gone", false),
+            },
+        );
+        event.file = file.clone();
+
+        apply_forward(&event).unwrap();
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "- [ ] keep\n");
+
+        apply_reverse(&event).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&file).unwrap(),
+            "- [ ] keep\n- [ ] gone\n"
+        );
+    }
+
+    #[test]
+    fn apply_forward_delete_is_hash_guarded() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("todo.md");
+        std::fs::write(&file, "- [ ] changed externally\n").unwrap();
+        let mut event = event(
+            "01",
+            HistoryAction::Delete {
+                task_id: "task-a".to_string(),
+                before: line(1, "original text", false),
+            },
+        );
+        event.file = file.clone();
+        let err = apply_forward(&event).unwrap_err();
+        assert!(matches!(err, crate::error::AppError::HistoryHashMismatch { .. }));
     }
 
     #[test]

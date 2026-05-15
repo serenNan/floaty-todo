@@ -7,6 +7,7 @@ import { useHistoryStore } from './stores/history';
 import { useTheme } from './composables/useTheme';
 import { openQuickAdd } from './composables/useQuickAdd';
 import { toast } from './composables/useToast';
+import { errorMessage } from './utils/errors';
 import { api } from './services/tauri-api';
 import EmptyState from './components/EmptyState.vue';
 import TaskList from './components/TaskList.vue';
@@ -58,9 +59,13 @@ onMounted(async () => {
     }
     const result = await openQuickAdd({ sourceId });
     if (result) {
-      await tasks.add(result.text, result.sourceId, result.quadrant);
-      // 窗口本是被快捷键临时呼出的 —— 存完任务退回隐藏。取消(Esc)则不动。
-      if (wasHidden) await api.hideWindow();
+      try {
+        await tasks.add(result.text, result.sourceId, result.quadrant);
+        // 窗口本是被快捷键临时呼出的 —— 存完任务退回隐藏。取消(Esc)则不动。
+        if (wasHidden) await api.hideWindow();
+      } catch (e) {
+        toast.error(errorMessage(e));
+      }
     }
   }));
   unlisteners.push(await api.onHotkeyRegisterFailed((accelerator) => {

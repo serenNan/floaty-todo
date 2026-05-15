@@ -183,6 +183,6 @@ export default {
     externalEditSkipped: '已跳过 {n} 条外部编辑',
     operationFailed: '操作失败：{reason}',
     addSourceFirst: '请先添加一个任务源',
-    hotkeyRegisterFailed: '{accel} 注册失败，可能已被其它程序占用',
+    hotkeyRegisterFailed: '{accel} 注册失败，可能已被其它程序占用，请到设置里更换',
   },
 };

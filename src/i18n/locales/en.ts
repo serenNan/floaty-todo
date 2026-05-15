@@ -183,6 +183,6 @@ export default {
     externalEditSkipped: 'Skipped {n} external edit(s)',
     operationFailed: 'Operation failed: {reason}',
     addSourceFirst: 'Add a task source first',
-    hotkeyRegisterFailed: '{accel} could not be registered — it may be in use by another app',
+    hotkeyRegisterFailed: '{accel} could not be registered — it may be in use by another app. Pick another in Settings.',
   },
 };

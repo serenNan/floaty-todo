@@ -1,5 +1,11 @@
 # 变更日志
 
+## 2026-05-16 全局快捷键收尾修复
+
+- `App.vue` 的 quick-add 快捷键路径给 `tasks.add` 加 try/catch：写入失败时
+  toast 报错，不再产生未处理的 promise rejection / 卡住空窗口
+- `hotkeyRegisterFailed` 文案补「请到设置里更换」提示
+
 ## 2026-05-16 设置页新增全局快捷键设置区
 
 - `SettingsView.vue` 新增「全局快捷键」section：每个键一个绑定按钮，

@@ -50,6 +50,11 @@ export type HistoryEvent =
       after: LineSnapshot;
     })
   | (HistoryEventBase & {
+      kind: 'delete';
+      task_id: string;
+      before: LineSnapshot;
+    })
+  | (HistoryEventBase & {
       kind: 'external_edit';
       diff_summary: DiffSummary;
       size_bytes_delta: number;

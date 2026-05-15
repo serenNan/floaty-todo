@@ -67,6 +67,7 @@ function eventText(event: HistoryEvent) {
     const to = quadrantLabel(event.after.state?.quadrant);
     return `「${event.after.state?.text ?? ''}」 ${from} → ${to}`;
   }
+  if (event.kind === 'delete') return `删除「${event.before.state?.text ?? ''}」`;
   return `外部修改 ${fileName(event.file)} (+${event.diff_summary.added}/-${event.diff_summary.removed})`;
 }
 
@@ -75,6 +76,7 @@ function eventIcon(event: HistoryEvent) {
   if (event.kind === 'edit') return '✎';
   if (event.kind === 'add') return '+';
   if (event.kind === 'move') return '↕';
+  if (event.kind === 'delete') return '🗑';
   return '•';
 }
 

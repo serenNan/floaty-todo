@@ -1,5 +1,16 @@
 # 变更日志
 
+## 2026-05-15 docs：toast 气泡系统 + 历史未读徽章 设计文档 + 实现计划
+
+- 新增 `docs/superpowers/specs/2026-05-15-toast-notifications-design.md`：
+  toast 单例 composable + 全局组件、4 个变体（success 2s / info 3s /
+  warning 4s / error 6s）、`bottom: 52px` 居中、max 3 同时可见、hover 暂停、
+  跨窗口（主 + history）独立 toast；外部修改静默 + 历史按钮挂未读红点
+  徽章（localStorage `floaty.history.lastSeenAt` + `unseenExternal` computed
+  + 跨窗口 emit `history-seen-changed`）
+- 新增 `docs/superpowers/plans/2026-05-15-toast-notifications.md`：
+  9 个 task 的实现计划，每个 task 列出 file 路径 + 完整代码块 + 手动验证步骤
+
 ## 2026-05-15 style：图标 polish + 修 phantom VS Code tab
 
 - **图标**：历史按钮 `◷` → `🕒`；三处 `Icon name="settings"`

@@ -129,6 +129,7 @@ mod tests {
             enabled_quick_actions: crate::types::default_quick_actions(),
             hub_folder: None,
             auto_create_quadrant_headers: true,
+            hotkeys: crate::types::HotkeyConfig::defaults(),
         };
         save_to(&p, &cfg).unwrap();
 

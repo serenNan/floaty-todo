@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-15 AppConfig 新增 hotkeys 字段
+
+- `types.rs` 新增 `HotkeyConfig`（toggle / quick_add 两个可选 accelerator
+  字符串），加入 `AppConfig.hotkeys`
+- `#[serde(default)]` 兜底：旧 config.json 无此字段时落到默认值
+  （CmdOrCtrl+Shift+T / CmdOrCtrl+Shift+A）
+- 为「全局快捷键」功能的注册逻辑做准备
+
 ## 2026-05-15 新增 translateKeyEvent 键盘事件翻译函数
 
 - 新增 `src/utils/hotkey.ts`：`translateKeyEvent` 把浏览器 KeyboardEvent

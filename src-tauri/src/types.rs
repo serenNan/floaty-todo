@@ -106,6 +106,24 @@ impl Source {
 
 }
 
+/// 两个全局快捷键的 accelerator 字符串。`None` = 该键未绑定/已禁用。
+/// 字符串是 Tauri accelerator 语法（如 "CmdOrCtrl+Shift+T"）。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct HotkeyConfig {
+    pub toggle: Option<String>,
+    pub quick_add: Option<String>,
+}
+
+impl HotkeyConfig {
+    /// serde `default` 用 —— 旧 config.json 没有 `hotkeys` 字段时落到这里。
+    pub fn defaults() -> Self {
+        HotkeyConfig {
+            toggle: Some("CmdOrCtrl+Shift+T".into()),
+            quick_add: Some("CmdOrCtrl+Shift+A".into()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AppConfig {
     /// User-configured task sources. Replaces the v0.1 single `vault_path`.
@@ -138,6 +156,9 @@ pub struct AppConfig {
     pub hub_folder: Option<PathBuf>,
     #[serde(default = "default_true")]
     pub auto_create_quadrant_headers: bool,
+    /// 全局快捷键绑定。`#[serde(default)]` 保证旧 config 能加载。
+    #[serde(default = "HotkeyConfig::defaults")]
+    pub hotkeys: HotkeyConfig,
 }
 
 impl Default for AppConfig {
@@ -151,6 +172,7 @@ impl Default for AppConfig {
             enabled_quick_actions: default_quick_actions(),
             hub_folder: None,
             auto_create_quadrant_headers: true,
+            hotkeys: HotkeyConfig::defaults(),
         }
     }
 }
@@ -217,5 +239,35 @@ mod tests {
         let json = r#"{"sources":[],"inbox_file":"inbox.md","always_on_top":true}"#;
         let c: AppConfig = serde_json::from_str(json).unwrap();
         assert!(c.auto_create_quadrant_headers);
+    }
+
+    #[test]
+    fn hotkey_config_has_sensible_defaults() {
+        let h = HotkeyConfig::defaults();
+        assert_eq!(h.toggle.as_deref(), Some("CmdOrCtrl+Shift+T"));
+        assert_eq!(h.quick_add.as_deref(), Some("CmdOrCtrl+Shift+A"));
+    }
+
+    #[test]
+    fn config_defaults_include_hotkeys() {
+        let c = AppConfig::default();
+        assert_eq!(c.hotkeys.toggle.as_deref(), Some("CmdOrCtrl+Shift+T"));
+    }
+
+    #[test]
+    fn config_deserializes_missing_hotkeys_as_defaults() {
+        let json = r#"{"sources":[],"inbox_file":"inbox.md","always_on_top":true}"#;
+        let c: AppConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(c.hotkeys.toggle.as_deref(), Some("CmdOrCtrl+Shift+T"));
+        assert_eq!(c.hotkeys.quick_add.as_deref(), Some("CmdOrCtrl+Shift+A"));
+    }
+
+    #[test]
+    fn hotkey_config_roundtrips_with_cleared_key() {
+        let h = HotkeyConfig { toggle: Some("Ctrl+Alt+X".into()), quick_add: None };
+        let json = serde_json::to_string(&h).unwrap();
+        let back: HotkeyConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.toggle, h.toggle);
+        assert_eq!(back.quick_add, None);
     }
 }

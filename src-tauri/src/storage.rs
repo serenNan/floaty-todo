@@ -43,7 +43,6 @@ pub struct AppendResult {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct RemoveResult {
     pub new_hash: ContentHash,
     pub removed: LineSnapshot,
@@ -213,7 +212,6 @@ fn task_prefix_len(line: &str) -> Option<usize> {
 /// Delete the task on `line_number` (1-indexed) from `path`. Verifies the
 /// target line still parses as a task — otherwise the registry is stale and
 /// we'd be deleting random content. Returns the new content hash.
-#[allow(dead_code)]
 pub fn remove_task_line(path: &Path, line_number: usize) -> Result<RemoveResult> {
     let raw = std::fs::read_to_string(path)?;
     let mut lines: Vec<String> = split_lines(&raw);

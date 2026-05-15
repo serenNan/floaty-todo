@@ -203,6 +203,32 @@ pub fn add_task(
     Ok(())
 }
 
+/// Delete a task line and record it as an undoable `Delete` history event.
+/// Structurally mirrors `toggle_task`: look the task up in the registry,
+/// remove its line via `storage::remove_task_line`, register the new hash
+/// to suppress the watcher loop, refresh the registry, then push history.
+#[tauri::command]
+pub fn delete_task(state: State<'_, AppState>, app: AppHandle, task_id: String) -> Result<()> {
+    let task = {
+        let reg = state.registry.read().unwrap();
+        reg.get(&task_id).cloned().ok_or_else(|| AppError::TaskNotFound(task_id.clone()))?
+    };
+    let source = find_source_by_id(&state, &task.source_id)?;
+    let result = storage::remove_task_line(&task.source_file, task.line_number)?;
+    let before = snapshot_with_quadrant(result.removed, task.quadrant);
+    state.ignore_hashes.register(result.new_hash);
+    record_snapshot(&state, &task.source_file);
+    state.registry.write().unwrap().refresh_file(&source, &task.source_file)?;
+    push_history(
+        &state,
+        &app,
+        task.source_id.clone(),
+        task.source_file.clone(),
+        HistoryAction::Delete { task_id, before },
+    )?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_history(
     state: State<'_, AppState>,

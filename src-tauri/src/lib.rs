@@ -267,6 +267,7 @@ pub fn run() {
             commands::toggle_task,
             commands::update_task,
             commands::add_task,
+            commands::delete_task,
             commands::get_history,
             commands::get_history_cursor,
             commands::undo,

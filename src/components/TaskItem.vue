@@ -169,10 +169,11 @@ async function openLink(href: string) {
 }
 
 .text .match {
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
-  color: inherit;
+  background: #fde047;
+  color: #1f2937;
   border-radius: 2px;
-  padding: 0 1px;
+  padding: 0 2px;
+  font-weight: 600;
 }
 
 input[type="checkbox"] {

@@ -5,13 +5,14 @@
 
 ## 🔴 紧急+重要
 
-- [ ] **dev-test 这一轮新功能**：collapse-all、drag-to-reorder、reveal-in-explorer、hub-reveal、全 header click、宽度翻倍 —— 跑 `npm run tauri dev` 实际过一遍，确认没有视觉残留
+- [x] **dev-test 这一轮新功能**：collapse-all、drag-to-reorder、reveal-in-explorer、hub-reveal、全 header click、宽度翻倍 —— 跑 `npm run tauri dev` 实际过一遍，确认没有视觉残留
+- [x] 修复拖动bug
 
 ## 🟡 重要不紧急
 
 - [ ] **[v0.3] 全局快捷键**：呼出主窗口 + 快速添加任务（`tauri-plugin-global-shortcut`），让 Floaty 真正"按一下就能记一条"
 - [ ] **[v0.3] sidecar 元数据**：`.floaty-todo.json` 记录 `completed_at`；UI 实现「当天完成划线灰显 / 隔天默认隐藏」（PLAN.md 第七节流程 E）
-- [ ] **[v0.3] 搜索 / 过滤**：顶部输入框旁加搜索图标，支持按文本 fuzzy 匹配，多 source 跨范围
+- [x] **[v0.3] 搜索 / 过滤**：顶部输入框旁加搜索图标，支持按文本 fuzzy 匹配，多 source 跨范围
 - [ ] **[v0.3] 点击任务跳 Obsidian**：`obsidian://` URL scheme 打开任务所在文件 + 行
 - [ ] **[v0.3] 子任务缩进 + 父任务勾选传播**：勾父任务时弹 toast 询问「是否一并勾选 N 个子任务」（PLAN.md Q2）
 - [ ] **[v0.3] Obsidian Tasks emoji 只读识别**：⏫ / 📅 / 🔁 等元数据解析为 UI 徽章，不改原文

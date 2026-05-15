@@ -43,36 +43,16 @@ const totals = computed(() => {
 });
 
 // "+" button adds a *source* (folder or file). Tasks are added via each
-// source header's own ＋ button → opens QuickAddDialog. The submenu opens on
-// hover (desktop) and on click (touch/keyboard fallback); a short close
-// delay lets the cursor cross the 4px gap between button and menu without
-// the menu disappearing out from under it.
+// source header's own ＋ button → opens QuickAddDialog. Submenu opens on
+// click only; click-outside or Esc closes it.
 const showAddSourceMenu = ref(false);
 const addSourceWrap = ref<HTMLElement | null>(null);
-let closeTimer: number | null = null;
 
-function clearCloseTimer() {
-  if (closeTimer !== null) { window.clearTimeout(closeTimer); closeTimer = null; }
-}
-function openAddSource() {
-  clearCloseTimer();
-  showAddSourceMenu.value = true;
-}
 function closeAddSource() {
-  clearCloseTimer();
   showAddSourceMenu.value = false;
 }
-function scheduleCloseAddSource() {
-  clearCloseTimer();
-  closeTimer = window.setTimeout(() => {
-    showAddSourceMenu.value = false;
-    closeTimer = null;
-  }, 180);
-}
 function toggleAddSource() {
-  // Click fallback for touch / keyboard: just flip the current state.
-  if (showAddSourceMenu.value) closeAddSource();
-  else openAddSource();
+  showAddSourceMenu.value = !showAddSourceMenu.value;
 }
 
 function onDocClick(e: MouseEvent) {
@@ -90,7 +70,6 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', onDocClick);
   document.removeEventListener('keydown', onEsc);
-  clearCloseTimer();
 });
 
 async function addFolderSource() {
@@ -141,12 +120,7 @@ function toggleCollapseAll() {
         :placeholder="t('tasks.searchPlaceholder')"
         @keyup.esc="clearSearch"
       />
-      <div
-        class="add-source-wrap"
-        ref="addSourceWrap"
-        @mouseenter="openAddSource"
-        @mouseleave="scheduleCloseAddSource"
-      >
+      <div class="add-source-wrap" ref="addSourceWrap">
         <button
           type="button"
           class="add-source-btn"
@@ -160,8 +134,6 @@ function toggleCollapseAll() {
           v-if="showAddSourceMenu"
           class="add-source-menu"
           @click.stop
-          @mouseenter="openAddSource"
-          @mouseleave="scheduleCloseAddSource"
         >
           <button type="button" @click="addFolderSource">
             <Icon name="folder" :size="14" />

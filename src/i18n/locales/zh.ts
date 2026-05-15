@@ -37,6 +37,8 @@ export default {
     defaultBadge: '默认',
     expand: '展开',
     collapse: '折叠',
+    expandQuadrants: '展开所有象限',
+    collapseQuadrants: '折叠所有象限',
     addTask: '在此源中添加任务',
     openVscode: '用 VS Code 打开',
     openTerminal: '在此打开终端',

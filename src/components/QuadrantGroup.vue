@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch, inject, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { bindCollapse } from '../composables/useCollapse';
 import type { Quadrant, Task } from '../types/task';
@@ -21,6 +21,10 @@ const collapsed = ref(true);
 bindCollapse((v) => { collapsed.value = v; });
 watch(() => props.collapseToken, () => { collapsed.value = true; });
 watch(() => props.expandToken, () => { collapsed.value = false; });
+
+const searchQueryRef = inject<Ref<string>>('searchQuery', ref(''));
+const searchActive = computed(() => searchQueryRef.value.trim().length > 0);
+const effectiveCollapsed = computed(() => collapsed.value && !searchActive.value);
 
 function emoji(q: Quadrant | null): string {
   switch (q) {
@@ -44,14 +48,14 @@ function nameKey(q: Quadrant | null): string {
 </script>
 
 <template>
-  <div v-if="tasks.length > 0" class="quadrant-group" :class="{ collapsed }">
+  <div v-if="tasks.length > 0" class="quadrant-group" :class="{ collapsed: effectiveCollapsed }">
     <button class="quadrant-header" @click="collapsed = !collapsed">
-      <span class="caret">{{ collapsed ? '▶' : '▼' }}</span>
+      <span class="caret">{{ effectiveCollapsed ? '▶' : '▼' }}</span>
       <span class="emoji">{{ emoji(quadrant) }}</span>
       <span class="name">{{ t(nameKey(quadrant)) }}</span>
       <span class="count">{{ tasks.length }}</span>
     </button>
-    <div v-show="!collapsed" class="quadrant-tasks">
+    <div v-show="!effectiveCollapsed" class="quadrant-tasks">
       <TaskItem v-for="task in tasks" :key="task.id" :task="task" />
     </div>
   </div>

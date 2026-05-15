@@ -88,30 +88,6 @@ const displayLabel = computed(() => {
   return s.path.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? s.path;
 });
 
-const QUADRANT_COUNT_DISPLAY: Array<{ key: Quadrant | 'unsorted'; emoji: string }> = [
-  { key: 'urgent_important', emoji: '🔴' },
-  { key: 'not_urgent_important', emoji: '🟡' },
-  { key: 'urgent_not_important', emoji: '🟠' },
-  { key: 'not_urgent_not_important', emoji: '🟢' },
-  { key: 'unsorted', emoji: '⚪' },
-];
-
-const counts = computed(() => {
-  const buckets: Record<string, number> = {
-    urgent_important: 0,
-    not_urgent_important: 0,
-    urgent_not_important: 0,
-    not_urgent_not_important: 0,
-    unsorted: 0,
-  };
-  let done = 0;
-  for (const tk of props.tasks) {
-    if (tk.completed) { done++; continue; }
-    buckets[tk.quadrant ?? 'unsorted']++;
-  }
-  return { buckets, done };
-});
-
 /// Group tasks by their `source_file`. For File sources this collapses to a
 /// single bucket; for Folder sources each `.md` file becomes its own group.
 /// Files with zero tasks are included only when this is a File source — for
@@ -264,11 +240,13 @@ function onDotsPointerDown(e: PointerEvent) {
     onDrop: async (targetId: string) => {
       const order = settings.sources.map(s => s.id);
       const srcIdx = order.indexOf(props.source.id);
-      if (srcIdx < 0) return;
-      order.splice(srcIdx, 1);
       const tgtIdx = order.indexOf(targetId);
-      if (tgtIdx < 0) order.push(props.source.id);
-      else order.splice(tgtIdx, 0, props.source.id);
+      if (srcIdx < 0 || tgtIdx < 0) return;
+      // Capture tgtIdx BEFORE splicing srcIdx — otherwise downward drags
+      // (srcIdx < tgtIdx) end up off-by-one because removing srcIdx shifts
+      // the target's index down by 1 in the modified array.
+      order.splice(srcIdx, 1);
+      order.splice(tgtIdx, 0, props.source.id);
       try { await settings.reorderSources(order); }
       catch (err: any) { actionError.value = String(err); }
     },
@@ -342,18 +320,6 @@ const colorStyle = computed(() =>
       <span class="label" :title="source.path">{{ displayLabel }}</span>
       <span v-if="isScanning" class="scanning" :title="t('source.scanning')">
         <Icon name="loader" :size="14" />
-      </span>
-      <span class="counts">
-        <template v-for="b in QUADRANT_COUNT_DISPLAY" :key="b.key">
-          <span v-if="counts.buckets[b.key]" class="count-q">
-            <span class="count-emoji">{{ b.emoji }}</span>
-            <span class="count-n">{{ counts.buckets[b.key] }}</span>
-          </span>
-        </template>
-        <template v-if="counts.done">
-          <span class="count-sep"> · </span>
-          <span class="count-done">{{ counts.done }}</span>
-        </template>
       </span>
       <!-- Actions cluster: clicks here must NOT bubble to the header
            toggle, otherwise tapping an action would collapse the group.
@@ -625,28 +591,6 @@ const colorStyle = computed(() =>
   color: var(--text-muted);
   font-style: italic;
 }
-
-.counts {
-  font-size: 0.72rem;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-variant-numeric: tabular-nums;
-  opacity: 0;
-  transition: opacity 140ms ease-out;
-}
-header:hover .counts,
-header:focus-within .counts { opacity: 1; }
-.counts .count-q {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.1rem;
-}
-.counts .count-emoji { font-size: 0.78em; line-height: 1; }
-.counts .count-n { font-weight: 500; color: var(--text); }
-.counts .count-sep  { color: var(--text-muted); }
-.counts .count-done { color: var(--count-done); font-weight: 500; }
 
 .actions {
   display: flex;

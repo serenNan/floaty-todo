@@ -1,5 +1,22 @@
 # 变更日志
 
+## 2026-05-15 source 拖拽重排 off-by-one 修复 + UI 细节打磨
+
+- `SourceGroup.onDotsPointerDown.onDrop` 里 `splice(srcIdx, 1)` 后再算
+  `tgtIdx` 会让向下拖时目标下标少 1，导致"第 1 个挪到第 3 个"实际落到
+  第 2 个。修复：在 splice 之前先抓 `tgtIdx`，向上向下都用同一条
+  `splice(tgtIdx, 0, src)` 语义；同时把 srcIdx/tgtIdx 双重 < 0 校验合并
+- `TaskItem` 搜索命中高亮从 accent 半透明改成纯黄底 + 加粗深灰字，密集
+  列表里也能一眼看到
+- `QuadrantGroup` 接入全局 `searchQuery` —— 搜索激活时强制展开，跟
+  SourceGroup / FileGroup 一致，避免命中藏在折叠的象限里看不到
+- `TaskList` 顶部「添加源」下拉改为纯 click 切换，去掉之前 180ms 悬停
+  延时（鼠标稍偏一下就误触 / 误闭，体感跳脱）
+- `SourceGroup` header 上的 per-source 象限计数条整行移除：每个
+  QuadrantGroup header 自己显示数字，再来一份就是重复信息
+- TODO.md 标注本轮 dev-test + 任务搜索完成；zh.ts 补 `source.expandQuadrants`
+  / `collapseQuadrants` 两条 i18n（之前漏配，按钮 hover title 显示 key 字面量）
+
 ## 2026-05-15 source 内置「+ 添加任务」按钮 + 跨象限编辑 + 任务搜索
 
 - TaskList 顶部的搜索栏式任务输入框退役：每个 SourceGroup header 的 actions

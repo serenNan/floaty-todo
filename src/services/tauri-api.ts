@@ -82,6 +82,7 @@ export const api = {
     invoke<void>('set_enabled_quick_actions', { actions }),
   openUrl: (url: string) => invoke<void>('open_url', { url }),
   setAlwaysOnTop: (on: boolean) => invoke<void>('set_always_on_top', { on }),
+  hideWindow: () => invoke<void>('hide_window'),
   /// Re-register both global hotkeys. Pass the full pair every time —
   /// the backend persists the whole HotkeyConfig. `null` = unbind that key.
   setHotkeys: (toggle: string | null, quickAdd: string | null) =>

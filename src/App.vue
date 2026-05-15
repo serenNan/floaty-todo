@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from './stores/settings';
 import { useTaskStore } from './stores/tasks';
@@ -61,7 +60,7 @@ onMounted(async () => {
     if (result) {
       await tasks.add(result.text, result.sourceId, result.quadrant);
       // 窗口本是被快捷键临时呼出的 —— 存完任务退回隐藏。取消(Esc)则不动。
-      if (wasHidden) await invoke('hide_window');
+      if (wasHidden) await api.hideWindow();
     }
   }));
   unlisteners.push(await api.onHotkeyRegisterFailed((accelerator) => {

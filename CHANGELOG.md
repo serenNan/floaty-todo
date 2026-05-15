@@ -1,5 +1,10 @@
 # 变更日志
 
+## 2026-05-15 补 api.hideWindow 封装
+
+- `tauri-api.ts` 新增 `hideWindow` 封装；`App.vue` 改用 `api.hideWindow()`，
+  不再直接 `invoke('hide_window')`，与「invoke 统一走 api 层」约定对齐
+
 ## 2026-05-15 App.vue 监听全局快捷键事件
 
 - `App.vue` 监听 `trigger-quick-add`：选默认源弹 QuickAdd 模态，保存后

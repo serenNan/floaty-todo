@@ -1,5 +1,11 @@
 # 变更日志
 
+## 2026-05-15 象限「+」按钮改为常驻显示
+
+- `QuadrantGroup` header 的「+」按钮从 hover 才淡入改成一直可见
+  （去掉 `opacity: 0` 和 `:hover/:focus-within` 显示规则），hover 仍
+  保留 accent 高亮反馈
+
 ## 2026-05-15 每个象限独立的「+」入口
 
 - `QuadrantGroup` header 加 hover 显示的「+」按钮（`<span role="button">`

@@ -129,9 +129,8 @@ async function addHere() {
   font-size: 0.78em;
   opacity: 0.7;
 }
-/* Hover-revealed "+" — sits in the header but only fades in when the row
-   is hovered, so the resting state stays as minimal as before. Rendered
-   as a span+role="button" because <button> can't nest inside <button>. */
+/* Always-visible "+" — rendered as a span+role="button" because <button>
+   can't nest inside the header's <button>. */
 .quadrant-header .add-btn {
   display: inline-flex;
   align-items: center;
@@ -145,11 +144,8 @@ async function addHere() {
   border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 120ms, background 100ms, border-color 100ms, color 100ms;
+  transition: background 100ms, border-color 100ms, color 100ms;
 }
-.quadrant-header:hover .add-btn,
-.quadrant-header:focus-within .add-btn { opacity: 1; }
 .quadrant-header .add-btn:hover {
   background: color-mix(in srgb, var(--accent) 15%, transparent);
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);

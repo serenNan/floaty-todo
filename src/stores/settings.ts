@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { AppConfig, QuickActionKind, Source, SourceKind } from '../types/task';
+import type { AppConfig, ApplyResult, HotkeyConfig, QuickActionKind, Source, SourceKind } from '../types/task';
 import { api } from '../services/tauri-api';
 import { errorMessage } from '../utils/errors';
 import { toast } from '../composables/useToast';
@@ -24,6 +24,9 @@ export const useSettingsStore = defineStore('settings', () => {
   );
   const alwaysOnTop = computed<boolean>(() => config.value?.always_on_top ?? true);
   const hubFolder = computed<string | null>(() => config.value?.hub_folder ?? null);
+  const hotkeys = computed<HotkeyConfig>(
+    () => config.value?.hotkeys ?? { toggle: null, quick_add: null },
+  );
   /// Source ids currently being scanned by the backend. UI shows a spinner /
   /// disables actions for those sources. Track-by-id to avoid blocking
   /// unrelated sources when one is scanning.
@@ -179,6 +182,18 @@ export const useSettingsStore = defineStore('settings', () => {
       throw e;
     }
   }
+  /// Re-register hotkeys, reload config so the `hotkeys` computed reflects
+  /// what actually persisted, and hand the per-key result back to the caller
+  /// (SettingsView decides the toast since it knows which key changed).
+  async function setHotkeys(
+    toggle: string | null,
+    quickAdd: string | null,
+  ): Promise<ApplyResult> {
+    const result = await api.setHotkeys(toggle, quickAdd);
+    await load();
+    return result;
+  }
+
   /// Open the OS folder picker and use the result as the new hub folder.
   /// Returns the chosen path, or null if the picker was cancelled.
   async function pickAndSetHubFolder(): Promise<string | null> {
@@ -212,6 +227,7 @@ export const useSettingsStore = defineStore('settings', () => {
     enabledQuickActions,
     alwaysOnTop,
     hubFolder,
+    hotkeys,
     autoCreateQuadrantHeaders,
     scanningSourceIds,
     isScanning,
@@ -229,6 +245,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setHubFolder,
     setAutoCreateQuadrantHeaders,
     resyncHub,
+    setHotkeys,
     pickAndSetHubFolder,
     pickAndAddFolder,
     pickAndAddFile,

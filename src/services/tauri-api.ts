@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
-import type { Task, AppConfig, Source, SourceKind, QuickActionKind, Quadrant } from '../types/task';
+import type { Task, AppConfig, Source, SourceKind, QuickActionKind, Quadrant, ApplyResult } from '../types/task';
 import type { HistoryEvent } from '../types/history';
 
 export const api = {
@@ -82,6 +82,10 @@ export const api = {
     invoke<void>('set_enabled_quick_actions', { actions }),
   openUrl: (url: string) => invoke<void>('open_url', { url }),
   setAlwaysOnTop: (on: boolean) => invoke<void>('set_always_on_top', { on }),
+  /// Re-register both global hotkeys. Pass the full pair every time —
+  /// the backend persists the whole HotkeyConfig. `null` = unbind that key.
+  setHotkeys: (toggle: string | null, quickAdd: string | null) =>
+    invoke<ApplyResult>('set_hotkeys', { toggle, quickAdd }),
 
   setHubFolder: (path: string | null) => invoke<void>('set_hub_folder', { path }),
   resyncHub: () => invoke<void>('resync_hub'),
@@ -112,4 +116,8 @@ export const api = {
   emitHistorySeen: (): Promise<void> => emit('history-seen-changed'),
   onHistorySeenChanged: (cb: () => void): Promise<UnlistenFn> =>
     listen('history-seen-changed', cb),
+  onTriggerQuickAdd: (cb: (wasHidden: boolean) => void): Promise<UnlistenFn> =>
+    listen<{ wasHidden: boolean }>('trigger-quick-add', e => cb(e.payload.wasHidden)),
+  onHotkeyRegisterFailed: (cb: (accelerator: string) => void): Promise<UnlistenFn> =>
+    listen<string>('hotkey-register-failed', e => cb(e.payload)),
 };

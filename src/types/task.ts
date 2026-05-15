@@ -30,6 +30,24 @@ export interface Task {
   quadrant: Quadrant | null;
 }
 
+export interface HotkeyConfig {
+  /// Tauri accelerator string, or null when the key is unbound.
+  toggle: string | null;
+  quick_add: string | null;
+}
+
+/// Result of one key's registration attempt, returned by `set_hotkeys`.
+export interface KeyOutcome {
+  ok: boolean;
+  accelerator: string | null;
+  error: string | null;
+}
+
+export interface ApplyResult {
+  toggle: KeyOutcome;
+  quick_add: KeyOutcome;
+}
+
 export interface AppConfig {
   sources: Source[];
   default_source_id: string | null;
@@ -42,4 +60,5 @@ export interface AppConfig {
   /// tools can find every project's TODO in one place. `null` = off.
   hub_folder: string | null;
   auto_create_quadrant_headers: boolean;
+  hotkeys: HotkeyConfig;
 }

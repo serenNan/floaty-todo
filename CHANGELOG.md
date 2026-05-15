@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-15 前端接入快捷键数据层
+
+- `types/task.ts` 新增 `HotkeyConfig` / `KeyOutcome` / `ApplyResult` 接口，
+  `AppConfig` 加 `hotkeys` 字段
+- `tauri-api.ts` 加 `setHotkeys` 封装 + `trigger-quick-add` /
+  `hotkey-register-failed` 事件监听
+- `settings` store 加 `hotkeys` computed 与 `setHotkeys` action
+
 ## 2026-05-15 新增 set_hotkeys 命令
 
 - `commands.rs` 新增 `set_hotkeys` 命令：重新注册两个全局快捷键，

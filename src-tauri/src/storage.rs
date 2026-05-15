@@ -127,6 +127,27 @@ fn task_prefix_len(line: &str) -> Option<usize> {
     Some(i)
 }
 
+/// Delete the task on `line_number` (1-indexed) from `path`. Verifies the
+/// target line still parses as a task — otherwise the registry is stale and
+/// we'd be deleting random content. Returns the new content hash.
+pub fn remove_task_line(path: &Path, line_number: usize) -> Result<ContentHash> {
+    let raw = std::fs::read_to_string(path)?;
+    let mut lines: Vec<String> = raw.split_inclusive(|c| c == '\n').map(String::from).collect();
+    let idx = line_number.checked_sub(1).ok_or_else(|| AppError::NotATaskLine {
+        path: path.display().to_string(), line: line_number,
+    })?;
+    let line = lines.get(idx).cloned().ok_or_else(|| AppError::NotATaskLine {
+        path: path.display().to_string(), line: line_number,
+    })?;
+    let stripped = line.trim_end_matches(['\r', '\n']);
+    parse_line(stripped).ok_or_else(|| AppError::NotATaskLine {
+        path: path.display().to_string(), line: line_number,
+    })?;
+    lines.remove(idx);
+    let new_content: String = lines.concat();
+    atomic_write(path, new_content.as_bytes())
+}
+
 /// Append `- [ ] <text>` to file. Creates file (with parent dirs) if missing.
 /// Returns new content hash.
 pub fn append_task(path: &Path, text: &str) -> Result<ContentHash> {

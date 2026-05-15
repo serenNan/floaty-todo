@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, inject, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Source, Task } from '../types/task';
 import type { Quadrant } from '../types/task';
@@ -37,7 +37,11 @@ const props = withDefaults(defineProps<{
   /// Start collapsed (set by SourceGroup when the parent source is huge so
   /// the DOM stays responsive — only the file headers render until expanded).
   initialCollapsed?: boolean;
-}>(), { initialCollapsed: false });
+  /// Forwarded to child QuadrantGroup so the parent source's
+  /// "toggle all quadrants" button drives every file's quadrants too.
+  collapseToken?: number;
+  expandToken?: number;
+}>(), { initialCollapsed: false, collapseToken: 0, expandToken: 0 });
 
 const { t } = useI18n();
 const settings = useSettingsStore();
@@ -45,6 +49,10 @@ const settings = useSettingsStore();
 const collapsed = ref(props.initialCollapsed);
 const editing = ref(false);
 const labelDraft = ref('');
+
+const searchQueryRef = inject<Ref<string>>('searchQuery', ref(''));
+const searchActive = computed(() => searchQueryRef.value.trim().length > 0);
+const effectiveCollapsed = computed(() => collapsed.value && !searchActive.value);
 
 bindCollapse(next => { collapsed.value = next; });
 
@@ -66,10 +74,28 @@ const fallbackLabel = computed(() => {
 
 const displayLabel = computed(() => customLabel.value ?? fallbackLabel.value);
 
+const QUADRANT_COUNT_DISPLAY: Array<{ key: Quadrant | 'unsorted'; emoji: string }> = [
+  { key: 'urgent_important', emoji: '🔴' },
+  { key: 'not_urgent_important', emoji: '🟡' },
+  { key: 'urgent_not_important', emoji: '🟠' },
+  { key: 'not_urgent_not_important', emoji: '🟢' },
+  { key: 'unsorted', emoji: '⚪' },
+];
+
 const counts = computed(() => {
-  let todo = 0, done = 0;
-  for (const tk of props.tasks) (tk.completed ? done++ : todo++);
-  return { todo, done };
+  const buckets: Record<string, number> = {
+    urgent_important: 0,
+    not_urgent_important: 0,
+    urgent_not_important: 0,
+    not_urgent_not_important: 0,
+    unsorted: 0,
+  };
+  let done = 0;
+  for (const tk of props.tasks) {
+    if (tk.completed) { done++; continue; }
+    buckets[tk.quadrant ?? 'unsorted']++;
+  }
+  return { buckets, done };
 });
 
 function startEdit() {
@@ -92,17 +118,25 @@ async function clearLabel() {
 </script>
 
 <template>
-  <div class="file-group" :class="{ collapsed }">
+  <div class="file-group" :class="{ collapsed: effectiveCollapsed }">
     <header
       class="head"
       @click="collapsed = !collapsed"
-      :title="collapsed ? t('source.expand') : t('source.collapse')"
+      :title="effectiveCollapsed ? t('source.expand') : t('source.collapse')"
     >
       <span class="caret" aria-hidden="true">
-        <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="13" />
+        <Icon :name="effectiveCollapsed ? 'chevron-right' : 'chevron-down'" :size="13" />
       </span>
       <span class="name" :title="filePath">{{ displayLabel }}</span>
-      <span class="count"><span class="count-todo">{{ counts.todo }}</span><span v-if="counts.done" class="count-done">·{{ counts.done }}</span></span>
+      <span class="count">
+        <template v-for="b in QUADRANT_COUNT_DISPLAY" :key="b.key">
+          <span v-if="counts.buckets[b.key]" class="count-q">
+            <span class="count-emoji">{{ b.emoji }}</span>
+            <span class="count-n">{{ counts.buckets[b.key] }}</span>
+          </span>
+        </template>
+        <span v-if="counts.done" class="count-done">·{{ counts.done }}</span>
+      </span>
       <button
         class="edit-btn"
         :class="{ active: editing }"
@@ -127,12 +161,14 @@ async function clearLabel() {
       <button class="primary" @click="saveLabel">{{ t('source.actions.save') }}</button>
     </div>
 
-    <div v-if="!collapsed" class="rows">
+    <div v-if="!effectiveCollapsed" class="rows">
       <QuadrantGroup
         v-for="g in groupByQuadrant(tasks)"
         :key="String(g.quadrant)"
         :quadrant="g.quadrant"
         :tasks="g.tasks"
+        :collapse-token="collapseToken"
+        :expand-token="expandToken"
       />
       <div v-if="tasks.length === 0" class="empty">{{ t('file.noTasks') }}</div>
     </div>
@@ -185,8 +221,22 @@ async function clearLabel() {
 .count {
   font-size: 0.7rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 140ms ease-out;
 }
-.count .count-todo { color: var(--count-todo); }
+.head:hover .count,
+.head:focus-within .count { opacity: 1; }
+.count .count-q {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+.count .count-emoji { font-size: 0.78em; line-height: 1; }
+.count .count-n { font-weight: 500; color: var(--text); }
 .count .count-done { color: var(--count-done); margin-left: 4px; }
 
 .edit-btn {

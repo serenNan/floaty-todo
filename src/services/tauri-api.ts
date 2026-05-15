@@ -8,8 +8,17 @@ export const api = {
   getConfig: () => invoke<AppConfig>('get_config'),
   updateConfig: (cfg: AppConfig) => invoke<void>('update_config', { newConfig: cfg }),
   toggleTask: (taskId: string) => invoke<void>('toggle_task', { taskId }),
-  updateTask: (taskId: string, newText: string) =>
-    invoke<void>('update_task', { taskId, newText }),
+  /// `newQuadrant`:
+  ///   - `undefined` → keep current quadrant, text-only edit
+  ///   - `null`      → move to the unsorted bucket
+  ///   - a Quadrant  → move to that quadrant section
+  updateTask: (taskId: string, newText: string, newQuadrant?: Quadrant | null) =>
+    invoke<void>('update_task', {
+      taskId,
+      newText,
+      changeQuadrant: newQuadrant !== undefined,
+      newQuadrant: newQuadrant ?? null,
+    }),
   async addTask(text: string, sourceId?: string, quadrant?: Quadrant | null): Promise<void> {
     await invoke('add_task', {
       text,

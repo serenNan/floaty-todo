@@ -40,9 +40,9 @@ export const useTaskStore = defineStore('tasks', () => {
     catch (e: any) { error.value = String(e); }
   }
 
-  async function update(id: string, text: string) {
+  async function update(id: string, text: string, quadrant?: Quadrant | null) {
     if (!text.trim()) return;
-    try { await api.updateTask(id, text.trim()); await silentRefresh(); }
+    try { await api.updateTask(id, text.trim(), quadrant); await silentRefresh(); }
     catch (e: any) { error.value = String(e); }
   }
 

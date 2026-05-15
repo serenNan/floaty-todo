@@ -9,6 +9,7 @@ import TaskList from './components/TaskList.vue';
 import SettingsView from './views/SettingsView.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import TaskEditorDialog from './components/TaskEditorDialog.vue';
+import QuickAddDialog from './components/QuickAddDialog.vue';
 
 type View = 'tasks' | 'settings';
 
@@ -69,6 +70,7 @@ function backToTasks() { view.value = 'tasks'; }
     </div>
     <ConfirmDialog />
     <TaskEditorDialog />
+    <QuickAddDialog />
   </main>
 </template>
 

@@ -1,5 +1,27 @@
 # 变更日志
 
+## 2026-05-15 source 内置「+ 添加任务」按钮 + 跨象限编辑 + 任务搜索
+
+- TaskList 顶部的搜索栏式任务输入框退役：每个 SourceGroup header 的 actions
+  区开头加了一颗 accent 色调的「+」按钮，点开新的 `QuickAddDialog`（teleport
+  + promise 单例，跟 `useConfirm`/`useTaskEditor` 同模式）。弹窗里选 source
+  下拉 + 4+1 象限 chip + 文本输入；象限默认每次重置为 🟢「不紧急不重要」，
+  避免上次的选择隐式继承
+- 顶部行简化为 `.toolbar` — 搜索框 + 添加源菜单 + 折叠/展开 三件套；旧的
+  source-select / 5 象限按钮 / 任务 input 全部移除（i18n 也清掉了对应 key）
+- `TaskEditorDialog` 同步加上同款象限 chip 行 + source 颜色圆点 + label 头条；
+  返回类型从 `string | null` 变成 `{ text, quadrant } | null`
+- Rust `update_task` 命令新增 `change_quadrant: bool` + `new_quadrant:
+  Option<Quadrant>` 参数：象限没变 → 走原 `update_task_text`（缩进 / bullet /
+  checkbox 字节级保留）；象限变了 → `storage::remove_task_line` 删原行 +
+  `append_task_to_quadrant` 在目标 `##` header 下追加，遵守 `auto_create_quadrant_headers`
+- `storage::remove_task_line(path, line)` 新增：原子写、删行前用 `parse_line`
+  二次校验目标行确实是任务行，避免 registry 过期时误删非任务内容
+- 任务行级搜索 (linter / 用户协作完成): TaskList 顶部 search input → provide
+  `searchQuery`；TaskItem 在每段 inline-md segment 内部分词高亮匹配；FileGroup
+  / SourceGroup 在搜索激活时强制展开（独立于用户折叠状态）；FileGroup 计数升级
+  为 per-quadrant emoji 细分，跟 SourceGroup 风格对齐
+
 ## 2026-05-15 hover tint 跟随 source 强调色
 
 - TaskItem `.row:hover` + FileGroup `.head:hover` 的背景换成

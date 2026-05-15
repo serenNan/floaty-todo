@@ -2,15 +2,15 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Quadrant } from '../types/task';
-import { useTaskEditorState } from '../composables/useTaskEditor';
 import { useSettingsStore } from '../stores/settings';
-import { parseInline } from '../utils/inline-md';
+import { useQuickAddState } from '../composables/useQuickAdd';
 import { safeHexColor } from '../utils/colors';
+import { parseInline } from '../utils/inline-md';
 import { api } from '../services/tauri-api';
 
 const { t } = useI18n();
 const settings = useSettingsStore();
-const { visible, pending, close } = useTaskEditorState();
+const { visible, pending, close } = useQuickAddState();
 
 const QUADRANT_BUTTONS: Array<{ q: Quadrant | null; emoji: string; tooltipKey: string }> = [
   { q: 'urgent_important', emoji: '🔴', tooltipKey: 'quadrant.urgent_important' },
@@ -20,39 +20,35 @@ const QUADRANT_BUTTONS: Array<{ q: Quadrant | null; emoji: string; tooltipKey: s
   { q: null, emoji: '⚪', tooltipKey: 'quadrant.unsorted' },
 ];
 
+// Per UX call (2026-05-15): always reset to "not urgent / not important" so the
+// dialog never silently inherits last session's choice. Users almost always want
+// to grade *down* rather than up — high-priority tasks tend to be entered with
+// more deliberation anyway.
+const DEFAULT_QUADRANT: Quadrant = 'not_urgent_not_important';
+
 const draft = ref('');
-const quadrant = ref<Quadrant | null>(null);
+const sourceId = ref<string | null>(null);
+const quadrant = ref<Quadrant | null>(DEFAULT_QUADRANT);
 const editInput = ref<HTMLTextAreaElement | null>(null);
 
-const task = computed(() => pending.value?.task ?? null);
-
-const sourceInfo = computed(() => {
-  const tk = task.value;
-  if (!tk) return null;
-  return settings.sources.find(s => s.id === tk.source_id) ?? null;
+const targetSource = computed(() => {
+  const id = sourceId.value;
+  if (!id) return null;
+  return settings.sources.find(s => s.id === id) ?? null;
 });
-const sourceLabel = computed(() => {
-  const s = sourceInfo.value;
-  if (!s) return '';
+
+const targetLabel = computed(() => {
+  const s = targetSource.value;
+  if (!s) return '—';
   if (s.label && s.label.trim()) return s.label;
   return s.path.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? s.path;
 });
-const sourceColor = computed(() => safeHexColor(sourceInfo.value?.color ?? null));
 
-const fileLabel = computed(() => {
-  const tk = task.value;
-  if (!tk) return '';
-  const name = tk.source_file.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? tk.source_file;
-  return `${name} · L${tk.line_number}`;
-});
+const targetColor = computed(() => safeHexColor(targetSource.value?.color ?? null));
 
-function pickQuadrant(q: Quadrant | null) {
-  quadrant.value = q;
-}
-
-// Live inline-markdown preview — same parser TaskItem uses, so the preview
-// matches the row once the user saves. Strips multi-line input (collapsed
-// to a single space) because storage only accepts single-line tasks.
+// Live inline-markdown preview — same parser TaskItem & TaskEditorDialog use,
+// so what you see here is what'll render in the task list. Multi-line input is
+// flattened (newlines → space) because storage rejects multi-line tasks.
 const previewSegments = computed(() => {
   const flat = draft.value.replace(/\s*\n+\s*/g, ' ').trim();
   return flat ? parseInline(flat) : [];
@@ -63,48 +59,42 @@ async function openPreviewLink(href: string) {
   catch (e) { console.warn('openUrl failed:', e); }
 }
 
-// Sync draft from the task when the dialog opens; focus, caret to end.
-// We intentionally do NOT select-all — that turned a single accidental
-// keystroke into a full content wipe.
 watch(visible, async (v) => {
   if (!v) return;
-  draft.value = task.value?.text ?? '';
-  quadrant.value = task.value?.quadrant ?? null;
+  draft.value = '';
+  sourceId.value = pending.value?.sourceId ?? settings.defaultSourceId ?? null;
+  quadrant.value = DEFAULT_QUADRANT;
   await nextTick();
   const el = editInput.value;
   if (!el) return;
   el.focus();
-  const end = el.value.length;
-  el.setSelectionRange(end, end);
+  // Empty draft — cursor lands at offset 0 by default. No need to setSelectionRange.
 });
 
-function save() {
-  // Task lines are single-line by definition (storage rejects \n) — squash any
-  // newlines the user typed/pasted into a single space so save still succeeds.
-  const next = draft.value.replace(/\s*\n+\s*/g, ' ').trim();
-  const tk = task.value;
-  const textChanged = !!next && next !== tk?.text;
-  const quadrantChanged = !!tk && quadrant.value !== tk.quadrant;
-  // Empty or nothing-changed → cancel; caller writes nothing.
-  if (!tk || (!textChanged && !quadrantChanged) || !next) {
-    close(null);
-    return;
-  }
-  close({ text: next, quadrant: quadrant.value });
+function pickQuadrant(q: Quadrant | null) {
+  quadrant.value = q;
 }
 
 function cancel() { close(null); }
+
+function submit() {
+  // Task lines are single-line by definition — squash any newlines into a
+  // single space so the storage layer accepts the write.
+  const flat = draft.value.replace(/\s*\n+\s*/g, ' ').trim();
+  if (!flat || !sourceId.value) {
+    close(null);
+    return;
+  }
+  close({ text: flat, sourceId: sourceId.value, quadrant: quadrant.value });
+}
 
 function onKey(e: KeyboardEvent) {
   if (!visible.value) return;
   if (e.key === 'Escape') { e.preventDefault(); cancel(); }
 }
 
-// Wrap or unwrap the textarea selection with markdown markers.
-// Toggle rules:
-//   - If the selection itself is `prefix...suffix` → unwrap.
-//   - Else if the chars *around* the selection are markers → unwrap.
-//   - Else wrap; when there's no selection, drop the cursor between markers.
+// Wrap/unwrap the textarea selection with markdown markers — same toggle
+// semantics as TaskEditorDialog so the two dialogs feel identical.
 async function wrap(prefix: string, suffix: string = prefix) {
   const el = editInput.value;
   if (!el) return;
@@ -191,26 +181,36 @@ function onMdShortcut(e: KeyboardEvent) {
 
 <template>
   <Teleport to="body">
-    <Transition name="editor-fade">
+    <Transition name="quickadd-fade">
       <div
         v-if="visible"
-        class="editor-overlay"
+        class="overlay"
         @click.self="cancel"
         @keydown="onKey"
         tabindex="-1"
       >
-        <div class="editor-card" role="dialog" :aria-label="t('task.edit')">
+        <div class="card" role="dialog" :aria-label="t('quickAdd.title')">
           <header class="head">
-            <h3 class="title">{{ t('task.edit') }}</h3>
+            <h3 class="title">{{ t('quickAdd.title') }}</h3>
             <span
-              v-if="sourceColor"
+              v-if="targetColor"
               class="dot"
-              :style="{ background: sourceColor }"
+              :style="{ background: targetColor }"
               aria-hidden="true"
             ></span>
-            <span class="source-pill" :title="task?.source_file">{{ sourceLabel }}</span>
+            <span class="subtitle" :title="targetSource?.path ?? ''">{{ targetLabel }}</span>
           </header>
-          <p class="subtitle" :title="task?.source_file">{{ fileLabel }}</p>
+
+          <label class="field">
+            <span class="field-label">{{ t('quickAdd.targetLabel') }}</span>
+            <select v-model="sourceId" class="source-select" :title="targetLabel">
+              <option v-for="s in settings.sources" :key="s.id" :value="s.id">
+                {{ s.label && s.label.trim()
+                  ? s.label
+                  : (s.path.split(/[\\/]/).filter(Boolean).pop() ?? s.path) }}
+              </option>
+            </select>
+          </label>
 
           <div class="field">
             <span class="field-label">{{ t('quickAdd.quadrantLabel') }}</span>
@@ -235,11 +235,12 @@ function onMdShortcut(e: KeyboardEvent) {
             v-model="draft"
             class="editor-input"
             rows="5"
-            :placeholder="t('task.editPlaceholder')"
+            :placeholder="t('quickAdd.placeholder')"
             @keydown="onMdShortcut"
-            @keydown.enter.exact.prevent="save"
+            @keydown.enter.exact.prevent="submit"
           ></textarea>
-          <!-- Live preview — only visible once the user has typed something
+
+          <!-- Live preview — only renders once the user has typed something
                renderable, otherwise it just adds visual noise to an empty draft. -->
           <div v-if="previewSegments.length" class="preview" :aria-label="t('task.previewLabel')">
             <span class="preview-tag">{{ t('task.previewLabel') }}</span>
@@ -260,10 +261,14 @@ function onMdShortcut(e: KeyboardEvent) {
               </template>
             </span>
           </div>
+
           <p class="hint">{{ t('task.saveHint') }}</p>
+
           <div class="actions">
             <button class="ghost" @click="cancel">{{ t('confirm.cancel') }}</button>
-            <button class="primary" @click="save">{{ t('source.actions.save') }}</button>
+            <button class="primary" :disabled="!draft.trim() || !sourceId" @click="submit">
+              {{ t('quickAdd.submit') }}
+            </button>
           </div>
         </div>
       </div>
@@ -272,7 +277,7 @@ function onMdShortcut(e: KeyboardEvent) {
 </template>
 
 <style scoped>
-.editor-overlay {
+.overlay {
   position: fixed;
   inset: 0;
   background: color-mix(in srgb, #000 35%, transparent);
@@ -285,10 +290,7 @@ function onMdShortcut(e: KeyboardEvent) {
   padding: 0.6rem;
 }
 
-.editor-card {
-  /* The Floaty window is narrow (680px×520) — let the modal use almost the
-     full viewport. The 1.2rem horizontal padding plus the overlay's 0.6rem
-     gutter give a comfortable but not luxurious frame. */
+.card {
   width: 100%;
   max-width: none;
   max-height: calc(100vh - 1.2rem);
@@ -300,6 +302,7 @@ function onMdShortcut(e: KeyboardEvent) {
   animation: pop 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
   display: flex;
   flex-direction: column;
+  gap: 0.55rem;
 }
 
 @keyframes pop {
@@ -311,7 +314,7 @@ function onMdShortcut(e: KeyboardEvent) {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.05rem;
 }
 .title {
   margin: 0;
@@ -326,32 +329,20 @@ function onMdShortcut(e: KeyboardEvent) {
   border-radius: 999px;
   flex-shrink: 0;
 }
-.source-pill {
-  font-size: 0.78rem;
+.subtitle {
+  font-size: 0.72rem;
   color: var(--text-muted);
+  font-family: 'Cascadia Code', 'Consolas', ui-monospace, monospace;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 
-.subtitle {
-  margin: 0 0 0.5rem;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-family: 'Cascadia Code', 'Consolas', ui-monospace, monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Quadrant chips — mirrors QuickAddDialog's styling so the two dialogs
-   feel identical when creating vs. editing a task. */
 .field {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 0.55rem;
 }
 .field-label {
   font-size: 0.7rem;
@@ -360,6 +351,18 @@ function onMdShortcut(e: KeyboardEvent) {
   letter-spacing: 0.04em;
   font-weight: 600;
 }
+
+.source-select {
+  padding: 0.4rem 0.5rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.source-select:focus { outline: none; border-color: var(--accent); }
+
 .quadrant-row {
   display: flex;
   flex-wrap: wrap;
@@ -395,6 +398,8 @@ function onMdShortcut(e: KeyboardEvent) {
   white-space: nowrap;
 }
 
+/* Textarea + preview block: matches TaskEditorDialog sizing so the two
+   dialogs feel identical when editing vs. creating. */
 .editor-input {
   display: block;
   width: 100%;
@@ -417,7 +422,6 @@ function onMdShortcut(e: KeyboardEvent) {
 }
 
 .preview {
-  margin-top: 0.5rem;
   padding: 0.5rem 0.7rem;
   background: var(--surface-strong);
   border: 1px dashed var(--border);
@@ -437,9 +441,7 @@ function onMdShortcut(e: KeyboardEvent) {
   letter-spacing: 0.04em;
   font-weight: 600;
 }
-.preview .preview-body {
-  display: block;
-}
+.preview .preview-body { display: block; }
 .preview strong { font-weight: 600; }
 .preview em { font-style: italic; }
 .preview s { color: var(--text-muted); }
@@ -462,7 +464,7 @@ function onMdShortcut(e: KeyboardEvent) {
 .preview .md-link:hover { text-decoration-color: var(--accent); }
 
 .hint {
-  margin: 0.4rem 0 0.9rem;
+  margin: 0;
   font-size: 0.7rem;
   color: var(--text-muted);
 }
@@ -471,6 +473,7 @@ function onMdShortcut(e: KeyboardEvent) {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+  margin-top: 0.1rem;
 }
 .actions button {
   padding: 0.4rem 0.95rem;
@@ -480,7 +483,7 @@ function onMdShortcut(e: KeyboardEvent) {
   border: 1px solid var(--border);
   background: var(--surface-strong);
   color: var(--text);
-  transition: background 100ms, border-color 100ms;
+  transition: background 100ms, border-color 100ms, opacity 100ms;
 }
 .actions button:hover { background: var(--accent-soft); }
 .actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -490,11 +493,15 @@ function onMdShortcut(e: KeyboardEvent) {
   border-color: var(--accent);
 }
 .actions button.primary:hover { opacity: 0.9; }
+.actions button.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 .actions button.ghost { background: transparent; }
 .actions button.ghost:hover { background: var(--surface-strong); }
 
-.editor-fade-enter-active,
-.editor-fade-leave-active { transition: opacity 140ms ease-out; }
-.editor-fade-enter-from,
-.editor-fade-leave-to { opacity: 0; }
+.quickadd-fade-enter-active,
+.quickadd-fade-leave-active { transition: opacity 140ms ease-out; }
+.quickadd-fade-enter-from,
+.quickadd-fade-leave-to { opacity: 0; }
 </style>

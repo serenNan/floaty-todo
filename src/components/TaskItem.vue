@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject, ref, type Ref } from 'vue';
 import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
 import { api } from '../services/tauri-api';
@@ -11,9 +11,38 @@ const tasks = useTaskStore();
 
 const segments = computed(() => parseInline(props.task.text));
 
+const searchQueryRef = inject<Ref<string>>('searchQuery', ref(''));
+const query = computed(() => searchQueryRef.value.trim().toLowerCase());
+
+interface HighlightPart { text: string; match: boolean; }
+
+function splitByQuery(text: string): HighlightPart[] {
+  const q = query.value;
+  if (!q) return [{ text, match: false }];
+  const lower = text.toLowerCase();
+  const out: HighlightPart[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const j = lower.indexOf(q, i);
+    if (j < 0) {
+      out.push({ text: text.slice(i), match: false });
+      break;
+    }
+    if (j > i) out.push({ text: text.slice(i, j), match: false });
+    out.push({ text: text.slice(j, j + q.length), match: true });
+    i = j + q.length;
+  }
+  return out;
+}
+
 async function onTextClick() {
-  const next = await editTask(props.task);
-  if (next !== null) await tasks.update(props.task.id, next);
+  const result = await editTask(props.task);
+  if (!result) return;
+  // Only pass quadrant through when the user actually changed it — otherwise
+  // we'd force the backend's cross-quadrant move path for a plain text edit
+  // and lose the in-place rewrite (which preserves indent / checkbox state).
+  const quadrantArg = result.quadrant !== props.task.quadrant ? result.quadrant : undefined;
+  await tasks.update(props.task.id, result.text, quadrantArg);
 }
 
 async function openLink(href: string) {
@@ -35,18 +64,40 @@ async function openLink(href: string) {
     <input type="checkbox" :checked="task.completed" @change="tasks.toggle(task.id)" />
     <span class="text" @click.prevent.stop="onTextClick">
       <template v-for="(seg, i) in segments" :key="i">
-        <code v-if="seg.type === 'code'" class="md-code">{{ seg.text }}</code>
-        <strong v-else-if="seg.type === 'bold'">{{ seg.text }}</strong>
-        <em v-else-if="seg.type === 'italic'">{{ seg.text }}</em>
-        <s v-else-if="seg.type === 'strike'">{{ seg.text }}</s>
+        <code v-if="seg.type === 'code'" class="md-code">
+          <template v-for="(p, j) in splitByQuery(seg.text)" :key="j"
+            ><mark v-if="p.match" class="match">{{ p.text }}</mark
+            ><template v-else>{{ p.text }}</template></template>
+        </code>
+        <strong v-else-if="seg.type === 'bold'">
+          <template v-for="(p, j) in splitByQuery(seg.text)" :key="j"
+            ><mark v-if="p.match" class="match">{{ p.text }}</mark
+            ><template v-else>{{ p.text }}</template></template>
+        </strong>
+        <em v-else-if="seg.type === 'italic'">
+          <template v-for="(p, j) in splitByQuery(seg.text)" :key="j"
+            ><mark v-if="p.match" class="match">{{ p.text }}</mark
+            ><template v-else>{{ p.text }}</template></template>
+        </em>
+        <s v-else-if="seg.type === 'strike'">
+          <template v-for="(p, j) in splitByQuery(seg.text)" :key="j"
+            ><mark v-if="p.match" class="match">{{ p.text }}</mark
+            ><template v-else>{{ p.text }}</template></template>
+        </s>
         <a
           v-else-if="seg.type === 'link'"
           class="md-link"
           :href="seg.href"
           :title="seg.href"
           @click.prevent.stop="openLink(seg.href)"
-        >{{ seg.text }}</a>
-        <template v-else>{{ seg.text }}</template>
+        ><template v-for="(p, j) in splitByQuery(seg.text)" :key="j"
+            ><mark v-if="p.match" class="match">{{ p.text }}</mark
+            ><template v-else>{{ p.text }}</template></template></a>
+        <template v-else>
+          <template v-for="(p, j) in splitByQuery(seg.text)" :key="j"
+            ><mark v-if="p.match" class="match">{{ p.text }}</mark
+            ><template v-else>{{ p.text }}</template></template>
+        </template>
       </template>
     </span>
   </label>
@@ -115,6 +166,13 @@ async function openLink(href: string) {
 }
 .text .md-link:hover {
   text-decoration-color: var(--accent);
+}
+
+.text .match {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 input[type="checkbox"] {

@@ -36,6 +36,7 @@
 - [ ] **inbox.md 文件名 hardcoded**：所有 folder source 共用同一个 `inbox.md` 文件名。考虑每个 source 可单独配置
 - [ ] **i18n 字符串 hardcoded 在 useConfirm**：confirm.removeSource* 等键值散在 useConfirm 调用方，提一个统一 helper
 - [ ] **dev 端口 1422 写死**：之前为避开 WishTalk 的 1420 改的；可以做一个端口自适应
+- [ ] 添加一个自动总结功能
 
 ## 设计上明确「不做」
 

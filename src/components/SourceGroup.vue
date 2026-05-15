@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, inject, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { QuickActionKind, Source, Task } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
@@ -17,6 +17,8 @@ import Icon from './icons/Icon.vue';
 import { SOURCE_COLORS, safeHexColor } from '../utils/colors';
 import QuadrantGroup from './QuadrantGroup.vue';
 import type { Quadrant } from '../types/task';
+import { openQuickAdd } from '../composables/useQuickAdd';
+import { useTaskStore } from '../stores/tasks';
 
 const QUADRANT_ORDER: (Quadrant | null)[] = [
   'urgent_important',
@@ -45,13 +47,35 @@ const props = defineProps<{ source: Source; tasks: Task[] }>();
 defineEmits<{ 'open-settings': [] }>();
 const { t } = useI18n();
 const settings = useSettingsStore();
+const taskStore = useTaskStore();
 
 const collapsed = ref(true);
+// Per-source "expand/collapse all quadrants" state. Tokens are bumped on
+// each toggle so child QuadrantGroup watches fire even when the boolean
+// hasn't actually flipped on their side (e.g. user manually opened one).
+const quadrantsExpanded = ref(false);
+const collapseQuadrantToken = ref(0);
+const expandQuadrantToken = ref(0);
+function toggleAllQuadrants() {
+  if (quadrantsExpanded.value) {
+    quadrantsExpanded.value = false;
+    collapseQuadrantToken.value++;
+  } else {
+    quadrantsExpanded.value = true;
+    expandQuadrantToken.value++;
+  }
+}
 const editing = ref(false);
 const labelDraft = ref('');
 const rootDraft = ref('');
 const colorDraft = ref<string | null>(null);
 const actionError = ref<string | null>(null);
+
+// Active search query (injected from TaskList). When non-empty, override
+// the user's collapse state so matches are visible without manual expansion.
+const searchQueryRef = inject<Ref<string>>('searchQuery', ref(''));
+const searchActive = computed(() => searchQueryRef.value.trim().length > 0);
+const effectiveCollapsed = computed(() => collapsed.value && !searchActive.value);
 
 // React to global "Collapse all" / "Expand all" from the footer button.
 bindCollapse(next => { collapsed.value = next; });
@@ -64,10 +88,28 @@ const displayLabel = computed(() => {
   return s.path.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? s.path;
 });
 
+const QUADRANT_COUNT_DISPLAY: Array<{ key: Quadrant | 'unsorted'; emoji: string }> = [
+  { key: 'urgent_important', emoji: '🔴' },
+  { key: 'not_urgent_important', emoji: '🟡' },
+  { key: 'urgent_not_important', emoji: '🟠' },
+  { key: 'not_urgent_not_important', emoji: '🟢' },
+  { key: 'unsorted', emoji: '⚪' },
+];
+
 const counts = computed(() => {
-  let todo = 0, done = 0;
-  for (const tk of props.tasks) (tk.completed ? done++ : todo++);
-  return { todo, done };
+  const buckets: Record<string, number> = {
+    urgent_important: 0,
+    not_urgent_important: 0,
+    urgent_not_important: 0,
+    not_urgent_not_important: 0,
+    unsorted: 0,
+  };
+  let done = 0;
+  for (const tk of props.tasks) {
+    if (tk.completed) { done++; continue; }
+    buckets[tk.quadrant ?? 'unsorted']++;
+  }
+  return { buckets, done };
 });
 
 /// Group tasks by their `source_file`. For File sources this collapses to a
@@ -94,6 +136,13 @@ const fileGroups = computed(() => {
 
 async function runAction(kind: QuickActionKind) {
   try { await api.runQuickAction(props.source.id, kind); }
+  catch (e: any) { actionError.value = String(e); }
+}
+
+async function addTaskHere() {
+  const result = await openQuickAdd({ sourceId: props.source.id });
+  if (!result) return;
+  try { await taskStore.add(result.text, result.sourceId, result.quadrant); }
   catch (e: any) { actionError.value = String(e); }
 }
 
@@ -250,8 +299,8 @@ const isBigSource = computed(() => props.tasks.length > BIG_SOURCE_TASK_THRESHOL
 /// open-folder glyph when expanded so the visual matches the disclosure
 /// state; file gets a pencil-and-page when expanded to imply "editable".
 const kindEmoji = computed(() => {
-  if (props.source.kind === 'folder') return collapsed.value ? '📁' : '📂';
-  return collapsed.value ? '📄' : '📝';
+  if (props.source.kind === 'folder') return effectiveCollapsed.value ? '📁' : '📂';
+  return effectiveCollapsed.value ? '📄' : '📝';
 });
 
 // Source color comes from config; validate as hex so untrusted config can't
@@ -270,7 +319,7 @@ const colorStyle = computed(() =>
 <template>
   <section
     class="group"
-    :class="{ collapsed, colored: !!safeColor }"
+    :class="{ collapsed: effectiveCollapsed, colored: !!safeColor }"
     :style="colorStyle"
   >
     <header
@@ -281,22 +330,26 @@ const colorStyle = computed(() =>
       }"
       :data-source-id="source.id"
       @click="collapsed = !collapsed"
-      :title="collapsed ? t('source.expand') : t('source.collapse')"
+      :title="effectiveCollapsed ? t('source.expand') : t('source.collapse')"
     >
       <!-- Caret is decorative now — the whole header handles the toggle.
            Keeping the visual chevron so the disclosure affordance still
            reads, but click cost goes to anywhere in the bar. -->
       <span class="caret" aria-hidden="true">
-        <Icon :name="collapsed ? 'chevron-right' : 'chevron-down'" :size="14" />
+        <Icon :name="effectiveCollapsed ? 'chevron-right' : 'chevron-down'" :size="14" />
       </span>
       <span class="kind-icon" aria-hidden="true">{{ kindEmoji }}</span>
       <span class="label" :title="source.path">{{ displayLabel }}</span>
-      <span v-if="isDefault" class="badge" :title="t('source.defaultBadge')">{{ t('source.defaultBadge') }}</span>
       <span v-if="isScanning" class="scanning" :title="t('source.scanning')">
         <Icon name="loader" :size="14" />
       </span>
       <span class="counts">
-        <span class="count-todo">{{ counts.todo }}</span>
+        <template v-for="b in QUADRANT_COUNT_DISPLAY" :key="b.key">
+          <span v-if="counts.buckets[b.key]" class="count-q">
+            <span class="count-emoji">{{ b.emoji }}</span>
+            <span class="count-n">{{ counts.buckets[b.key] }}</span>
+          </span>
+        </template>
         <template v-if="counts.done">
           <span class="count-sep"> · </span>
           <span class="count-done">{{ counts.done }}</span>
@@ -306,6 +359,13 @@ const colorStyle = computed(() =>
            toggle, otherwise tapping an action would collapse the group.
            Drag-and-drop reorders the buttons across every source. -->
       <div class="actions" @click.stop>
+        <button
+          class="icon-btn add-btn"
+          @click="addTaskHere"
+          :title="t('source.addTask')"
+        >
+          <Icon name="plus" :size="14" />
+        </button>
         <button
           v-for="a in enabledActions"
           :key="a.kind"
@@ -324,6 +384,14 @@ const colorStyle = computed(() =>
           :title="t(a.i18n)"
         >
           <QuickActionIcon :kind="a.kind" />
+        </button>
+        <button
+          v-if="!effectiveCollapsed"
+          class="icon-btn"
+          @click="toggleAllQuadrants"
+          :title="quadrantsExpanded ? t('source.collapseQuadrants') : t('source.expandQuadrants')"
+        >
+          <Icon :name="quadrantsExpanded ? 'collapse-all' : 'expand-all'" :size="14" />
         </button>
         <button
           class="icon-btn"
@@ -408,7 +476,7 @@ const colorStyle = computed(() =>
 
     <p v-if="actionError" class="error" @click="actionError = null">{{ actionError }}</p>
 
-    <div v-if="!collapsed" class="rows">
+    <div v-if="!effectiveCollapsed" class="rows">
       <div v-if="isScanning" class="scanning-row">{{ t('source.scanningHint') }}</div>
 
       <!-- File source: render tasks grouped by quadrant. -->
@@ -418,6 +486,8 @@ const colorStyle = computed(() =>
           :key="String(g.quadrant)"
           :quadrant="g.quadrant"
           :tasks="g.tasks"
+          :collapse-token="collapseQuadrantToken"
+          :expand-token="expandQuadrantToken"
         />
         <div v-if="tasks.length === 0 && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
       </template>
@@ -431,6 +501,8 @@ const colorStyle = computed(() =>
           :file-path="g.filePath"
           :tasks="g.tasks"
           :initial-collapsed="isBigSource"
+          :collapse-token="collapseQuadrantToken"
+          :expand-token="expandQuadrantToken"
         />
         <div v-if="fileGroups.length === 0 && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
       </template>
@@ -557,8 +629,22 @@ const colorStyle = computed(() =>
 .counts {
   font-size: 0.72rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 140ms ease-out;
 }
-.counts .count-todo { color: var(--count-todo); font-weight: 500; }
+header:hover .counts,
+header:focus-within .counts { opacity: 1; }
+.counts .count-q {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+.counts .count-emoji { font-size: 0.78em; line-height: 1; }
+.counts .count-n { font-weight: 500; color: var(--text); }
 .counts .count-sep  { color: var(--text-muted); }
 .counts .count-done { color: var(--count-done); font-weight: 500; }
 
@@ -621,6 +707,19 @@ const colorStyle = computed(() =>
    opens the in-header editor. Grab cursor advertises the affordance. */
 .icon-btn.drag-handle { cursor: grab; }
 .icon-btn.drag-handle:active { cursor: grabbing; }
+
+/* Add-task button — accent-tinted so it stands out from the muted
+   quick-action and edit buttons; this is the primary CTA on the row. */
+.icon-btn.add-btn {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.icon-btn.add-btn:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--accent);
+}
 
 .editor {
   padding: 0.5rem 0.6rem 0.6rem;

@@ -46,21 +46,58 @@ pub fn toggle_task(state: State<'_, AppState>, task_id: String) -> Result<()> {
     Ok(())
 }
 
-/// Replace the text of an existing task in place. Preserves indent, bullet
-/// style, checkbox state and trailing whitespace verbatim.
+/// Replace the text of an existing task and optionally move it to a different
+/// quadrant section.
+///
+/// - `change_quadrant = false` → rewrite the line in place, preserving indent,
+///   bullet style, checkbox state and trailing whitespace byte-for-byte.
+/// - `change_quadrant = true` → the caller wants the task moved to
+///   `new_quadrant` (which may be `None` for the unsorted bucket). If the
+///   target is the same as the task's current quadrant we still take the
+///   in-place path; if it differs, the original line is removed and a fresh
+///   `- [ ] <text>` is appended under the target quadrant's `## ` header.
+///
+/// We need the explicit boolean because `Option<Option<T>>` is indistinguishable
+/// from a single `Option<T>` once it crosses Tauri/serde IPC (both `None` and
+/// `Some(None)` serialize to `null`).
 #[tauri::command]
 pub fn update_task(
     state: State<'_, AppState>,
     task_id: String,
     new_text: String,
+    change_quadrant: bool,
+    new_quadrant: Option<crate::types::Quadrant>,
 ) -> Result<()> {
     let task = {
         let reg = state.registry.read().unwrap();
         reg.get(&task_id).cloned().ok_or_else(|| AppError::TaskNotFound(task_id.clone()))?
     };
     let source = find_source_by_id(&state, &task.source_id)?;
-    let new_hash = storage::update_task_text(&task.source_file, task.line_number, &new_text)?;
-    state.ignore_hashes.register(new_hash);
+
+    let quadrant_changing = change_quadrant && new_quadrant != task.quadrant;
+
+    if !quadrant_changing {
+        let new_hash = storage::update_task_text(&task.source_file, task.line_number, &new_text)?;
+        state.ignore_hashes.register(new_hash);
+        state.registry.write().unwrap().refresh_file(&source, &task.source_file)?;
+        return Ok(());
+    }
+
+    // Cross-quadrant move within the same file: delete the original line,
+    // then re-append under the target quadrant's header. The append path
+    // reuses the same append_task_to_quadrant logic that add_task uses, so
+    // header auto-creation honours the user's `auto_create_quadrant_headers`
+    // preference exactly like new-task creation does.
+    let auto_create_headers = state.config.read().unwrap().auto_create_quadrant_headers;
+    let hash_after_delete = storage::remove_task_line(&task.source_file, task.line_number)?;
+    state.ignore_hashes.register(hash_after_delete);
+    let final_hash = storage::append_task_to_quadrant(
+        &task.source_file,
+        &new_text,
+        new_quadrant,
+        auto_create_headers,
+    )?;
+    state.ignore_hashes.register(final_hash);
     state.registry.write().unwrap().refresh_file(&source, &task.source_file)?;
     Ok(())
 }

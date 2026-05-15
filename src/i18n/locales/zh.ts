@@ -10,8 +10,6 @@ export default {
   },
   tasks: {
     loading: '加载中…',
-    addPlaceholder: '新任务到 {target}…（回车）',
-    targetDefault: '★ {label}',
     addSourceTitle: '添加新任务源',
     todoCount: '{n} 待办',
     doneCount: '{n} 已完成',
@@ -19,6 +17,7 @@ export default {
     refreshTitle: '刷新（重新读取所有 .md 文件）',
     collapseAll: '全部折叠',
     expandAll: '全部展开',
+    searchPlaceholder: '搜索任务…',
     addFolderTitle: '添加文件夹源',
     addFileTitle: '添加文件源',
   },
@@ -38,6 +37,7 @@ export default {
     defaultBadge: '默认',
     expand: '展开',
     collapse: '折叠',
+    addTask: '在此源中添加任务',
     openVscode: '用 VS Code 打开',
     openTerminal: '在此打开终端',
     openClaudeCode: '启动 Claude Code 会话',
@@ -69,6 +69,13 @@ export default {
     urgent_not_important: '紧急不重要',
     not_urgent_not_important: '不紧急不重要',
     unsorted: '未分类',
+  },
+  quickAdd: {
+    title: '添加任务',
+    targetLabel: '添加到',
+    quadrantLabel: '紧急程度',
+    placeholder: '任务内容…',
+    submit: '添加',
   },
   settings: {
     title: '设置',

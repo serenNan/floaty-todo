@@ -1,19 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { bindCollapse } from '../composables/useCollapse';
 import type { Quadrant, Task } from '../types/task';
 import TaskItem from './TaskItem.vue';
 
-defineProps<{
+const props = withDefaults(defineProps<{
   quadrant: Quadrant | null;
   tasks: Task[];
-}>();
+  // Per-source toggle tokens — parent SourceGroup increments one of these
+  // to drive every quadrant in that source open/closed in one click.
+  // Default 0 → watches never fire until the parent acts.
+  collapseToken?: number;
+  expandToken?: number;
+}>(), { collapseToken: 0, expandToken: 0 });
 
 const { t } = useI18n();
 
-const collapsed = ref(false);
+const collapsed = ref(true);
 bindCollapse((v) => { collapsed.value = v; });
+watch(() => props.collapseToken, () => { collapsed.value = true; });
+watch(() => props.expandToken, () => { collapsed.value = false; });
 
 function emoji(q: Quadrant | null): string {
   switch (q) {

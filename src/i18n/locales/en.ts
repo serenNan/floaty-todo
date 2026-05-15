@@ -85,6 +85,7 @@ export default {
     sections: {
       appearance: 'Appearance',
       language: 'Language',
+      hotkeys: 'Global hotkeys',
       quickActions: 'Quick actions',
       hub: 'Hub folder',
       sources: 'Sources',
@@ -129,6 +130,15 @@ export default {
     auto_create_quadrant_headers: 'Auto-create quadrant headers',
     auto_create_quadrant_headers_help:
       'When you add a task to a quadrant whose header is missing, create the header automatically.',
+    hotkeys: {
+      hint: 'System-wide shortcuts. Click a binding to record a new key combo, Esc to cancel.',
+      toggle: 'Show / hide window',
+      quickAdd: 'Quick add task',
+      record: 'Click to record',
+      recording: 'Press a key combo…',
+      clear: 'Clear',
+      updated: 'Hotkey updated',
+    },
   },
   errors: {
     pickFailed: 'Could not pick that path.',
@@ -172,5 +182,7 @@ export default {
     historyNothing: 'Nothing to undo/redo',
     externalEditSkipped: 'Skipped {n} external edit(s)',
     operationFailed: 'Operation failed: {reason}',
+    addSourceFirst: 'Add a task source first',
+    hotkeyRegisterFailed: '{accel} could not be registered — it may be in use by another app',
   },
 };

@@ -85,6 +85,7 @@ export default {
     sections: {
       appearance: '外观',
       language: '语言',
+      hotkeys: '全局快捷键',
       quickActions: '快捷动作',
       hub: '中枢文件夹',
       sources: '任务源',
@@ -129,6 +130,15 @@ export default {
     auto_create_quadrant_headers: '自动创建象限标题',
     auto_create_quadrant_headers_help:
       '向一个不存在的象限添加任务时，自动追加 `## 🔴 紧急+重要` 等标题。',
+    hotkeys: {
+      hint: '系统级快捷键。点击某个绑定可录制新组合键，Esc 取消。',
+      toggle: '显示 / 隐藏窗口',
+      quickAdd: '快速添加任务',
+      record: '点击录制',
+      recording: '请按下组合键…',
+      clear: '清空',
+      updated: '已更新快捷键',
+    },
   },
   errors: {
     pickFailed: '无法选择该路径。',
@@ -172,5 +182,7 @@ export default {
     historyNothing: '没有可撤销/重做的操作',
     externalEditSkipped: '已跳过 {n} 条外部编辑',
     operationFailed: '操作失败：{reason}',
+    addSourceFirst: '请先添加一个任务源',
+    hotkeyRegisterFailed: '{accel} 注册失败，可能已被其它程序占用',
   },
 };

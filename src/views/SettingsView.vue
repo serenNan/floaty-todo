@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../stores/settings';
 import { useTheme } from '../composables/useTheme';
@@ -12,6 +12,8 @@ import type { IconName } from '../components/icons/Icon.vue';
 import type { QuickActionKind, Source } from '../types/task';
 import { SOURCE_COLORS } from '../utils/colors';
 import { errorMessage } from '../utils/errors';
+import { translateKeyEvent } from '../utils/hotkey';
+import { toast } from '../composables/useToast';
 
 defineEmits<{ back: [] }>();
 
@@ -176,6 +178,67 @@ async function revealSource(s: Source) {
   try { await api.runQuickAction(s.id, 'reveal'); }
   catch (e: any) { actionError.value = errorMessage(e); }
 }
+
+type HotkeyKey = 'toggle' | 'quick_add';
+
+/// 当前正在录制哪个键；null = 没在录制。
+const recordingKey = ref<HotkeyKey | null>(null);
+
+/// 把 accelerator 字符串显示得好看点："Ctrl+Shift+T" -> "Ctrl + Shift + T"。
+function displayAccel(accel: string | null): string {
+  return accel ? accel.replace(/\+/g, ' + ') : '';
+}
+
+function onRecordKey(e: KeyboardEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.key === 'Escape') {
+    stopRecording();
+    return;
+  }
+  const accel = translateKeyEvent(e);
+  if (!accel) return; // 只按了修饰键 / 不支持的主键 —— 继续等
+  const key = recordingKey.value;
+  stopRecording();
+  if (key) void commitHotkey(key, accel);
+}
+
+function startRecording(key: HotkeyKey) {
+  recordingKey.value = key;
+  window.addEventListener('keydown', onRecordKey, { capture: true });
+}
+
+function stopRecording() {
+  recordingKey.value = null;
+  window.removeEventListener('keydown', onRecordKey, { capture: true });
+}
+
+/// 提交一个键的新值（accel=null 表示清空解绑），按结果 toast。
+async function commitHotkey(key: HotkeyKey, accel: string | null) {
+  const hk = settings.hotkeys;
+  const toggle = key === 'toggle' ? accel : hk.toggle;
+  const quickAdd = key === 'quick_add' ? accel : hk.quick_add;
+  try {
+    const result = await settings.setHotkeys(toggle, quickAdd);
+    const outcome = key === 'toggle' ? result.toggle : result.quick_add;
+    if (outcome.ok) {
+      toast.success(t('settings.hotkeys.updated'));
+    } else {
+      toast.error(t('toast.hotkeyRegisterFailed', { accel: accel ?? '' }));
+    }
+  } catch (e) {
+    toast.error(errorMessage(e));
+  }
+}
+
+function clearHotkey(key: HotkeyKey) {
+  void commitHotkey(key, null);
+}
+
+onUnmounted(() => {
+  // 录制中途离开设置页时把 window 监听器摘掉。
+  if (recordingKey.value) stopRecording();
+});
 </script>
 
 <template>
@@ -216,6 +279,56 @@ async function revealSource(s: Source) {
           <select :value="locale" @change="pickLocale">
             <option v-for="l in languages" :key="l.value" :value="l.value">{{ l.label }}</option>
           </select>
+        </div>
+      </section>
+
+      <!-- Global hotkeys -->
+      <section class="section">
+        <h3>{{ t('settings.sections.hotkeys') }}</h3>
+        <p class="muted hint">{{ t('settings.hotkeys.hint') }}</p>
+        <div class="row">
+          <span class="row-label">{{ t('settings.hotkeys.toggle') }}</span>
+          <div class="hotkey-controls">
+            <button
+              class="hotkey-bind"
+              :class="{ recording: recordingKey === 'toggle' }"
+              @click="recordingKey === 'toggle' ? stopRecording() : startRecording('toggle')"
+            >
+              {{ recordingKey === 'toggle'
+                ? t('settings.hotkeys.recording')
+                : (settings.hotkeys.toggle
+                    ? displayAccel(settings.hotkeys.toggle)
+                    : t('settings.hotkeys.record')) }}
+            </button>
+            <button
+              v-if="settings.hotkeys.toggle && recordingKey !== 'toggle'"
+              class="hotkey-clear"
+              :title="t('settings.hotkeys.clear')"
+              @click="clearHotkey('toggle')"
+            >✕</button>
+          </div>
+        </div>
+        <div class="row">
+          <span class="row-label">{{ t('settings.hotkeys.quickAdd') }}</span>
+          <div class="hotkey-controls">
+            <button
+              class="hotkey-bind"
+              :class="{ recording: recordingKey === 'quick_add' }"
+              @click="recordingKey === 'quick_add' ? stopRecording() : startRecording('quick_add')"
+            >
+              {{ recordingKey === 'quick_add'
+                ? t('settings.hotkeys.recording')
+                : (settings.hotkeys.quick_add
+                    ? displayAccel(settings.hotkeys.quick_add)
+                    : t('settings.hotkeys.record')) }}
+            </button>
+            <button
+              v-if="settings.hotkeys.quick_add && recordingKey !== 'quick_add'"
+              class="hotkey-clear"
+              :title="t('settings.hotkeys.clear')"
+              @click="clearHotkey('quick_add')"
+            >✕</button>
+          </div>
         </div>
       </section>
 
@@ -808,4 +921,41 @@ select {
 }
 .hub-unset button:hover { background: var(--accent-soft); }
 .hub-unset button:disabled { opacity: 0.5; cursor: default; }
+
+.hotkey-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hotkey-bind {
+  min-width: 140px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.hotkey-bind:hover {
+  border-color: var(--accent);
+}
+.hotkey-bind.recording {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.hotkey-clear {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+.hotkey-clear:hover {
+  color: #ef4444;
+  border-color: rgba(239,68,68,0.3);
+}
 </style>

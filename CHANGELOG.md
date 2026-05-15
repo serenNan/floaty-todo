@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-16 设置页新增全局快捷键设置区
+
+- `SettingsView.vue` 新增「全局快捷键」section：每个键一个绑定按钮，
+  点击进入按键录制态捕获新组合键，Esc 取消，旁带「✕」清空解绑
+- i18n（en/zh）补全 `settings.hotkeys.*`、`settings.sections.hotkeys`、
+  `toast.addSourceFirst`、`toast.hotkeyRegisterFailed` 文案
+- 至此「全局快捷键」功能 8 个任务全部完成
+
 ## 2026-05-15 补 api.hideWindow 封装
 
 - `tauri-api.ts` 新增 `hideWindow` 封装；`App.vue` 改用 `api.hideWindow()`，

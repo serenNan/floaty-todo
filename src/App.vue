@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from './stores/settings';
 import { useTaskStore } from './stores/tasks';
 import { useHistoryStore } from './stores/history';
 import { useTheme } from './composables/useTheme';
+import { openQuickAdd } from './composables/useQuickAdd';
+import { toast } from './composables/useToast';
 import { api } from './services/tauri-api';
 import EmptyState from './components/EmptyState.vue';
 import TaskList from './components/TaskList.vue';
@@ -20,6 +24,7 @@ const tasks = useTaskStore();
 const history = useHistoryStore();
 // Touch useTheme so its system-pref listener mounts at the App root.
 useTheme();
+const { t } = useI18n();
 const hasSources = computed(() => settings.hasSources);
 const view = ref<View>('tasks');
 
@@ -44,6 +49,23 @@ onMounted(async () => {
   }));
   unlisteners.push(await api.onSourceScanFinished(id => {
     settings.markScanning(id, false);
+  }));
+  unlisteners.push(await api.onTriggerQuickAdd(async (wasHidden) => {
+    // 全局 quick-add 快捷键触发：选默认源（没有默认就第一个），弹 QuickAdd。
+    const sourceId = settings.defaultSourceId ?? settings.sources[0]?.id ?? null;
+    if (!sourceId) {
+      toast.info(t('toast.addSourceFirst'));
+      return;
+    }
+    const result = await openQuickAdd({ sourceId });
+    if (result) {
+      await tasks.add(result.text, result.sourceId, result.quadrant);
+      // 窗口本是被快捷键临时呼出的 —— 存完任务退回隐藏。取消(Esc)则不动。
+      if (wasHidden) await invoke('hide_window');
+    }
+  }));
+  unlisteners.push(await api.onHotkeyRegisterFailed((accelerator) => {
+    toast.warning(t('toast.hotkeyRegisterFailed', { accel: accelerator }));
   }));
 });
 

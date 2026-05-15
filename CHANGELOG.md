@@ -1,5 +1,11 @@
 # 变更日志
 
+## 2026-05-15 App.vue 监听全局快捷键事件
+
+- `App.vue` 监听 `trigger-quick-add`：选默认源弹 QuickAdd 模态，保存后
+  若窗口是被快捷键临时呼出的则自动隐回
+- 监听 `hotkey-register-failed`：toast 警告某快捷键未注册成功
+
 ## 2026-05-15 前端接入快捷键数据层
 
 - `types/task.ts` 新增 `HotkeyConfig` / `KeyOutcome` / `ApplyResult` 接口，

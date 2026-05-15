@@ -781,4 +781,45 @@ mod tests {
             "## 🔴 Urgent\n\n## 🟡 Later\n- [ ] other\n- [ ] keep edited\n"
         );
     }
+
+    #[test]
+    fn remove_task_line_deletes_target_and_keeps_others() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "# h\n- [ ] one\n- [ ] two\n- [ ] three\n");
+        remove_task_line(&p, 3).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "# h\n- [ ] one\n- [ ] three\n"
+        );
+    }
+
+    #[test]
+    fn remove_task_line_preserves_crlf() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "- [ ] one\r\n- [ ] two\r\n");
+        remove_task_line(&p, 1).unwrap();
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "- [ ] two\r\n");
+    }
+
+    #[test]
+    fn remove_task_line_rejects_non_task_line() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "# heading\n- [ ] task\n");
+        assert!(remove_task_line(&p, 1).is_err());
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "# heading\n- [ ] task\n"
+        );
+    }
+
+    #[test]
+    fn remove_task_line_returns_removed_snapshot() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "a.md", "- [x] done task\n");
+        let result = remove_task_line(&p, 1).unwrap();
+        assert_eq!(result.removed.line, 1);
+        assert_eq!(result.removed.raw, "- [x] done task\n");
+        assert_eq!(result.removed.state.as_ref().unwrap().done, true);
+        assert_eq!(result.removed.state.as_ref().unwrap().text, "done task");
+    }
 }

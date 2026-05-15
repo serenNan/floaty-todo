@@ -182,6 +182,24 @@ async function removeSource() {
 const dragKind = ref<QuickActionKind | null>(null);
 const dropTargetKind = ref<QuickActionKind | null>(null);
 
+// Press-and-hold cursor hint: brand buttons are draggable AND clickable.
+// Showing `cursor: grab` on plain hover misled users into thinking the
+// buttons were drag-only. Instead, keep the cursor as a normal pointer
+// until the user has held the mouse down long enough that they're clearly
+// trying to drag — then flip to grabbing.
+const PRESS_HOLD_MS = 220;
+const pressingKind = ref<QuickActionKind | null>(null);
+let pressTimer: ReturnType<typeof setTimeout> | null = null;
+function onActionPointerDown(kind: QuickActionKind, e: PointerEvent) {
+  if (e.button !== 0) return;
+  clearPressTimer();
+  pressTimer = setTimeout(() => { pressingKind.value = kind; }, PRESS_HOLD_MS);
+}
+function clearPressTimer() {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  pressingKind.value = null;
+}
+
 function onActionDragStart(e: DragEvent, kind: QuickActionKind) {
   dragKind.value = kind;
   if (e.dataTransfer) {
@@ -340,13 +358,17 @@ const colorStyle = computed(() =>
           :class="{
             dragging: dragKind === a.kind,
             'drop-target': dropTargetKind === a.kind,
+            pressing: pressingKind === a.kind,
           }"
           draggable="true"
-          @dragstart.stop="onActionDragStart($event, a.kind)"
+          @pointerdown="onActionPointerDown(a.kind, $event)"
+          @pointerup="clearPressTimer"
+          @pointerleave="clearPressTimer"
+          @dragstart.stop="onActionDragStart($event, a.kind); clearPressTimer()"
           @dragover="onActionDragOver($event, a.kind)"
           @dragleave="onActionDragLeave(a.kind)"
           @drop="onActionDrop($event, a.kind)"
-          @dragend.stop="onActionDragEnd"
+          @dragend.stop="onActionDragEnd(); clearPressTimer()"
           @click="runAction(a.kind)"
           :title="t(a.i18n)"
         >
@@ -366,7 +388,7 @@ const colorStyle = computed(() =>
           @click="editing ? cancelEdit() : startEdit()"
           :title="t('source.edit')"
         >
-          <Icon name="settings" :size="14" />
+          <span aria-hidden="true">⚙️</span>
         </button>
         <button
           class="icon-btn drag-handle"
@@ -615,21 +637,23 @@ const colorStyle = computed(() =>
   align-items: center;
   justify-content: center;
 }
+/* Hover tint follows the source's own colour so all action buttons in a
+   row feel like one family. Falls back to --accent when the source has
+   no custom colour (--src-color is inline-bound on .group when set, so
+   the variable simply resolves to its fallback otherwise). Brand
+   buttons inherit the same tint — the icon's own colour is set inside
+   QuickActionIcon's scoped style, so the foreground identity (VS Code
+   blue, Terminal green, etc.) survives even when this rule recolours
+   the surrounding box. */
 .icon-btn:hover {
-  background: var(--surface);
-  border-color: var(--border);
+  background: color-mix(in srgb, var(--src-color, var(--accent)) 16%, transparent);
+  border-color: color-mix(in srgb, var(--src-color, var(--accent)) 32%, transparent);
   color: var(--text);
 }
 .icon-btn.active {
   background: var(--accent-soft);
   color: var(--accent);
   border-color: var(--border);
-}
-.icon-btn.brand:hover {
-  /* Use the brand colour as the hover background so the icon stays
-     readable against a soft tint of itself. */
-  background: color-mix(in srgb, currentColor 10%, transparent);
-  border-color: color-mix(in srgb, currentColor 30%, transparent);
 }
 
 /* Drag feedback: dim the grabbed button, accent-outline the drop target. */
@@ -642,10 +666,14 @@ const colorStyle = computed(() =>
   border-color: var(--accent);
   transform: scale(1.05);
 }
+/* Brand buttons are draggable AND clickable. Default to a plain pointer
+   so the affordance reads "click me"; only flip to grabbing after the
+   user has held the mouse down long enough (PRESS_HOLD_MS) that they're
+   clearly trying to drag — keeps the visual honest for both gestures. */
 .icon-btn.brand[draggable="true"] {
-  cursor: grab;
+  cursor: pointer;
 }
-.icon-btn.brand[draggable="true"]:active {
+.icon-btn.brand.pressing {
   cursor: grabbing;
 }
 
@@ -654,18 +682,10 @@ const colorStyle = computed(() =>
 .icon-btn.drag-handle { cursor: grab; }
 .icon-btn.drag-handle:active { cursor: grabbing; }
 
-/* Add-task button — accent-tinted so it stands out from the muted
-   quick-action and edit buttons; this is the primary CTA on the row. */
-.icon-btn.add-btn {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
-}
-.icon-btn.add-btn:hover {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  color: var(--accent);
-}
+/* Add-task button — plain white plus on the transparent header; hover
+   gets the standard icon-btn surface lift so it still feels clickable. */
+.icon-btn.add-btn { color: #fff; }
+.icon-btn.add-btn:hover { color: #fff; }
 
 .editor {
   padding: 0.5rem 0.6rem 0.6rem;

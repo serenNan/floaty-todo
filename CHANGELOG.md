@@ -1,5 +1,28 @@
 # 变更日志
 
+## 2026-05-15 style：图标 polish + 修 phantom VS Code tab
+
+- **图标**：历史按钮 `◷` → `🕒`；三处 `Icon name="settings"`
+  （`TaskList` footer / `SourceGroup` header / `EmptyState` 角标）
+  统一换成 `⚙️` emoji；`Icon.vue` 不再保留临时加的 `clock`
+- **➕ 添加按钮**：去掉 accent 底色和边框，只保留白色十字，hover 继承
+  base `.icon-btn:hover` 的 source-tint 反馈
+- **Action-row hover 统一**：所有 `.icon-btn:hover` 改用
+  `var(--src-color, var(--accent))` 做背景/边框 tint（之前 brand 按钮
+  用自身品牌色 tint，导致 ➕ / VS Code / Terminal 等并排 hover 颜色
+  不一致）。Brand 按钮前景仍由 `QuickActionIcon` scoped style 控制，
+  品牌色辨识不丢
+- **Press-and-hold cursor**：brand 按钮的 `cursor: grab` 改为按住 220ms
+  后才切到 `grabbing`（pointerdown timer + `.pressing` class +
+  pointerup/leave/dragstart/dragend 清理），避免 hover 看到 grab 误导
+  用户以为按钮是 drag-only
+- **修 phantom VS Code tab**：删除 `shell.rs` 里的
+  `open_vscode_returns_helpful_error_when_missing` 测试 —— 它在
+  `cargo test` 时**真的执行** `code.cmd C:\definitely-does-not-exist`，
+  VS Code 会创建一个名为 `definitely-does-not-exist` 的脏空 buffer 并
+  持久化进工作区会话，用户每次开同一个工作区都会看到这个无法摆脱的
+  幻影 tab，关窗时弹「是否保存」对话框
+
 ## 2026-05-15 feat：任务历史 + 撤销 + 时间线窗口（实现）
 
 - **后端**：新增 `src-tauri/src/history.rs`（`HistoryStore` + 事件 schema +

@@ -27,8 +27,7 @@ export type IconName =
   | 'arrow-left'
   | 'loader'
   | 'check'
-  | 'x'
-  | 'clock';
+  | 'x';
 
 withDefaults(defineProps<{
   name: IconName;
@@ -172,12 +171,6 @@ withDefaults(defineProps<{
     <g v-else-if="name === 'x'">
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
-    </g>
-
-    <!-- Clock: circle + hour/minute hands pointing to ~10:00 -->
-    <g v-else-if="name === 'clock'">
-      <circle cx="12" cy="12" r="9" />
-      <polyline points="12 7 12 12 16 14" />
     </g>
 
     <!-- Collapse-all: Lucide `chevrons-down-up` — pair of chevrons meeting

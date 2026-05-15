@@ -177,7 +177,7 @@ function toggleCollapseAll() {
 
     <div class="footer">
       <button class="footer-btn icon-only" @click="$emit('openSettings')" :title="t('settings.title')">
-        <Icon name="settings" :size="15" />
+        <span aria-hidden="true">⚙️</span>
       </button>
       <span class="counts">
         <span class="count-todo">{{ t('tasks.todoCount', { n: totals.todo }) }}</span>
@@ -191,7 +191,7 @@ function toggleCollapseAll() {
         @click="openHistory"
         title="History (Ctrl+H)"
       >
-        <span aria-hidden="true">◷</span>
+        <span aria-hidden="true">🕒</span>
       </button>
       <!-- Hub shortcuts — only show when the user has configured a hub,
            otherwise they have nowhere to point. Brand-coloured so they

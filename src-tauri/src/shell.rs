@@ -261,18 +261,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn open_vscode_returns_helpful_error_when_missing() {
-        // Skip: actually spawning code may succeed on the dev machine. We test
-        // the error path indirectly via a known-missing binary.
-        let result = open_vscode(Path::new(if cfg!(windows) {
-            "C:\\definitely-does-not-exist"
-        } else {
-            "/definitely-does-not-exist"
-        }));
-        // Don't assert error — if user has `code` installed, it'll happily
-        // launch and the path argument is its concern. We just check it
-        // doesn't panic.
-        let _ = result;
-    }
 }

@@ -42,7 +42,7 @@ async function addFile() {
       </div>
     </div>
     <button class="settings-corner" @click="$emit('openSettings')" :title="t('settings.title')">
-      <Icon name="settings" :size="15" />
+      <span aria-hidden="true">⚙️</span>
     </button>
   </div>
 </template>

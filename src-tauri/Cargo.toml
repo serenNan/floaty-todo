@@ -36,3 +36,4 @@ tempfile = "3.10"
 dunce = "1"
 time = { version = "0.3", features = ["formatting"] }
 ulid = "1"
+tauri-plugin-global-shortcut = "2"

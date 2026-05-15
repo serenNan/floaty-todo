@@ -2,6 +2,7 @@ mod commands;
 mod config;
 mod error;
 mod history;
+mod hotkeys;
 mod hub;
 mod parser;
 mod registry;
@@ -126,6 +127,16 @@ pub(crate) fn spawn_source_scan_and_watcher(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    // handler 对按下和松开都会触发，只处理按下。
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        hotkeys::dispatch(app, shortcut);
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             // ----- Config: load or default. load_from also normalises legacy
             // verbatim paths (\\?\...) — persist the cleaned form so the JSON
@@ -189,17 +200,13 @@ pub fn run() {
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
-                        let app = tray.app_handle();
-                        if let Some(w) = app.get_webview_window("main") {
-                            if w.is_visible().unwrap_or(false) && w.is_focused().unwrap_or(false) {
-                                let _ = w.hide();
-                            } else {
-                                let _ = w.show();
-                                let _ = w.unminimize();
-                                let _ = w.set_focus();
-                            }
-                        }
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        toggle_main_window(tray.app_handle());
                     }
                 })
                 .build(app)?;
@@ -247,6 +254,10 @@ pub fn run() {
                 }
             }
 
+            // 注册全局快捷键。单个失败不影响启动（register_all 内部已 emit
+            // hotkey-register-failed，前端会 toast 提示）。
+            hotkeys::register_all(&app.handle().clone(), &cfg.hotkeys);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -291,5 +302,19 @@ fn toggle_window(app: &AppHandle, show: bool) {
     if let Some(w) = app.get_webview_window("main") {
         if show { let _ = w.show(); let _ = w.set_focus(); }
         else { let _ = w.hide(); }
+    }
+}
+
+/// 主窗口智能切换：可见且聚焦 → 隐藏，否则前置。托盘左键点击和 toggle
+/// 全局快捷键共用。
+pub fn toggle_main_window(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        if w.is_visible().unwrap_or(false) && w.is_focused().unwrap_or(false) {
+            let _ = w.hide();
+        } else {
+            let _ = w.show();
+            let _ = w.unminimize();
+            let _ = w.set_focus();
+        }
     }
 }

@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-15 接入 tauri-plugin-global-shortcut 注册全局快捷键
+
+- 新增 `src-tauri/src/hotkeys.rs`：注册/注销/路由全局快捷键
+  （register_all / apply / dispatch / matches_accel）
+- `lib.rs` 接入 global-shortcut 插件，抽出共享的 `toggle_main_window`
+  （托盘左键点击与 toggle 快捷键共用），启动时 register_all
+- 依赖新增 `tauri-plugin-global-shortcut = "2"`
+
 ## 2026-05-15 AppConfig 新增 hotkeys 字段
 
 - `types.rs` 新增 `HotkeyConfig`（toggle / quick_add 两个可选 accelerator

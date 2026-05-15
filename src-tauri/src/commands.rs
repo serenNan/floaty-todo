@@ -3,7 +3,7 @@ use crate::error::{AppError, Result};
 use crate::history::{self, HistoryAction, HistoryEvent, HistoryStore, JumpDirection, LineSnapshot};
 use crate::registry::TaskRegistry;
 use crate::storage;
-use crate::types::{file_label_key, AppConfig, QuickActionKind, Source, SourceKind, Task};
+use crate::types::{file_label_key, AppConfig, HotkeyConfig, QuickActionKind, Source, SourceKind, Task};
 use crate::watcher::IgnoreHashes;
 use crate::{spawn_source_scan_and_watcher, WatcherSlots};
 use std::path::{Path, PathBuf};
@@ -808,6 +808,35 @@ pub fn hide_window(app: AppHandle) -> Result<()> {
         let _ = w.hide();
     }
     Ok(())
+}
+
+/// 重新设置两个全局快捷键。先注销旧键再注册新键；某键注册失败会回滚到旧
+/// 绑定。只把成功注册的键写进 config —— 失败的键保留旧值，配置和实际注册
+/// 状态始终一致。返回逐键结果给前端做 toast 反馈。
+#[tauri::command]
+pub fn set_hotkeys(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    toggle: Option<String>,
+    quick_add: Option<String>,
+) -> Result<crate::hotkeys::ApplyResult> {
+    let old = { state.config.read().unwrap().hotkeys.clone() };
+    let new = HotkeyConfig { toggle, quick_add };
+    let result = crate::hotkeys::apply(&app, &old, &new);
+
+    let mut persisted = old.clone();
+    if result.toggle.ok {
+        persisted.toggle = new.toggle.clone();
+    }
+    if result.quick_add.ok {
+        persisted.quick_add = new.quick_add.clone();
+    }
+    {
+        let mut cfg = state.config.write().unwrap();
+        cfg.hotkeys = persisted;
+        config::save_to(&state.config_path, &cfg)?;
+    }
+    Ok(result)
 }
 
 fn find_source_by_id(state: &AppState, source_id: &str) -> Result<Source> {

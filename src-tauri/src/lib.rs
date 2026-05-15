@@ -293,6 +293,7 @@ pub fn run() {
             commands::set_always_on_top,
             commands::show_window,
             commands::hide_window,
+            commands::set_hotkeys,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

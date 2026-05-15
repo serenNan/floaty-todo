@@ -1,5 +1,11 @@
 # 变更日志
 
+## 2026-05-15 新增 set_hotkeys 命令
+
+- `commands.rs` 新增 `set_hotkeys` 命令：重新注册两个全局快捷键，
+  注册失败的键回滚到旧绑定，只把成功的键写进 config 持久化
+- 注册到 `lib.rs` 的 invoke_handler
+
 ## 2026-05-15 接入 tauri-plugin-global-shortcut 注册全局快捷键
 
 - 新增 `src-tauri/src/hotkeys.rs`：注册/注销/路由全局快捷键

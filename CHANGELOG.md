@@ -1,5 +1,17 @@
 # 变更日志
 
+## 2026-05-15 docs：任务历史 + 撤销 + 时间线窗口 设计文档
+
+- 新增 `docs/superpowers/specs/2026-05-15-task-history-undo-design.md`：
+  13 节设计文档，含目标、架构图、事件 JSONL schema、Rust 模块改动
+  （新增 `history.rs` / 改造 `storage.rs` / 接入 `watcher.rs` 外部编辑分支）、
+  Tauri 多窗口（主窗 + 历史窗）、前端组件（`HistoryView` + `EventList` +
+  `EventDetail` + `JumpButton`）、撤销 / 重做 / 双向 jump-to 算法、Ctrl+Z /
+  Ctrl+Y / Ctrl+H 键位、边界处理、测试与 4 阶段实现顺序
+- 决策摘要：① 分两层覆盖（App 内动作可撤销，外部编辑只读时间线，回滚走 git）
+  ② JSONL 不限期保留 ③ 历史文件落 Hub 根 `.floaty-history.jsonl` 随 git 走
+  ④ 时间线窗口用左流右 diff 双栏（Notion 风）⑤ cursor 持久化跨会话 Ctrl+Z
+
 ## 2026-05-15 source 拖拽重排 off-by-one 修复 + UI 细节打磨
 
 - `SourceGroup.onDotsPointerDown.onDrop` 里 `splice(srcIdx, 1)` 后再算

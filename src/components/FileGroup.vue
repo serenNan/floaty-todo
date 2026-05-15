@@ -167,6 +167,7 @@ async function clearLabel() {
         :key="String(g.quadrant)"
         :quadrant="g.quadrant"
         :tasks="g.tasks"
+        :source-id="source.id"
         :collapse-token="collapseToken"
         :expand-token="expandToken"
       />

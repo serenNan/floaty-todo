@@ -23,7 +23,7 @@
 
 - [ ] **Hub label 冲突**：两个 source label 一样时，第二个 mirror 会失败（hard link 目标已存在）。当前回 `CommandFailed`；理想行为：后端自动加 `(2)` 后缀，或弹 confirm 让用户重命名
 - [ ] **跨卷 source 加进 hub 报错没在 UI 显示**：`add_source` 用 `try_hub` 吞了错误，用户不知道为什么 hub 里没出现。考虑加一个 toast / inline 提示
-- [ ] **大文件夹首次扫描进度**：现在只有"扫描中..."文字 + 旋转图标，没有 N/M 计数。`spawn_source_scan_and_watcher` 里 emit progress events
+- [x] **大文件夹首次扫描进度**：现在只有"扫描中..."文字 + 旋转图标，没有 N/M 计数。`spawn_source_scan_and_watcher` 里 emit progress events
 - [ ] **TitleBar.vue 孤儿组件**：commit d74fba0 引入后 1c3a1e2 弃用了，文件还在。该删
 
 ## 🟢 不紧急不重要

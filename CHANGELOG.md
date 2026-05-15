@@ -1,5 +1,20 @@
 # 变更日志
 
+## 2026-05-15 每个象限独立的「+」入口
+
+- `QuadrantGroup` header 加 hover 显示的「+」按钮（`<span role="button">`
+  实现，因为外层 header 已经是 `<button>`，嵌套 button 是 invalid HTML）。
+  点击 → `openQuickAdd({ sourceId, quadrant: <本象限> })`，QuickAdd 弹窗
+  以**当前象限**为初始选中，不再总是 fallback 到「不紧急不重要」
+- `QuickAddOptions` 加可选 `quadrant?: Quadrant | null`：`undefined` /
+  缺失 = "使用 dialog 默认值"（保持原先 source header 「+」入口行为），
+  显式 `null` = "锁定到 unsorted"
+- `QuickAddDialog` 打开时 `q === undefined ? DEFAULT_QUADRANT : q`，
+  正确区分 undefined / null 两种语义
+- `SourceGroup` / `FileGroup` 给嵌套的 `QuadrantGroup` 透传
+  `:source-id="source.id"`
+- TODO.md：勾掉「大文件夹首次扫描进度」（已发版）
+
 ## 2026-05-15 colored source 在深色主题下 accent 一致性
 
 - `SourceGroup.vue` 给 `.group.colored` 加一层 7% src-color body tint，

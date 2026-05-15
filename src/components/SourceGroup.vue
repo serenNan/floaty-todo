@@ -452,6 +452,7 @@ const colorStyle = computed(() =>
           :key="String(g.quadrant)"
           :quadrant="g.quadrant"
           :tasks="g.tasks"
+          :source-id="source.id"
           :collapse-token="collapseQuadrantToken"
           :expand-token="expandQuadrantToken"
         />

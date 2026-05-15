@@ -63,7 +63,10 @@ watch(visible, async (v) => {
   if (!v) return;
   draft.value = '';
   sourceId.value = pending.value?.sourceId ?? settings.defaultSourceId ?? null;
-  quadrant.value = DEFAULT_QUADRANT;
+  // Optional initial quadrant: `undefined` (key absent) → fall back to
+  // DEFAULT_QUADRANT; explicit `null` (unsorted) is honored as-is.
+  const q = pending.value?.quadrant;
+  quadrant.value = q === undefined ? DEFAULT_QUADRANT : q;
   await nextTick();
   const el = editInput.value;
   if (!el) return;

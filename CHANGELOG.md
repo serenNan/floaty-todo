@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-05-15 colored source 在深色主题下 accent 一致性
+
+- `SourceGroup.vue` 给 `.group.colored` 加一层 7% src-color body tint，
+  并把 header tint 从 10%/18% 提到 16%/26%。原因：深色 `--surface` 是
+  rgba 半透明，accent 左条只在 header 区域有 tint 衬托时看起来正常，
+  到展开后的 body 区域就被周围半透明深色面板"稀释"得偏暗，stripe 在
+  header / body 两段亮度对不齐。统一 tint 之后两段视觉连续
+- `.gitignore` 加 `.superpowers/`（superpowers skill 本地缓存目录）
+
 ## 2026-05-15 source 拖拽重排 off-by-one 修复 + UI 细节打磨
 
 - `SourceGroup.onDotsPointerDown.onDrop` 里 `splice(srcIdx, 1)` 后再算

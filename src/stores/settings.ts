@@ -2,6 +2,15 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { AppConfig, QuickActionKind, Source, SourceKind } from '../types/task';
 import { api } from '../services/tauri-api';
+import { errorMessage } from '../utils/errors';
+import { toast } from '../composables/useToast';
+import { i18n } from '../i18n';
+
+const t = i18n.global.t;
+
+function failed(e: unknown) {
+  toast.error(t('toast.operationFailed', { reason: errorMessage(e) }));
+}
 
 export const useSettingsStore = defineStore('settings', () => {
   const config = ref<AppConfig | null>(null);
@@ -42,19 +51,31 @@ export const useSettingsStore = defineStore('settings', () => {
     label?: string | null;
     projectRoot?: string | null;
   }): Promise<Source> {
-    const src = await api.addSource(args);
-    // Spinner is driven entirely by the backend's `source-scan-started` /
-    // `source-scan-finished` events. Manually marking here used to race
-    // the events for tiny files: backend emits both events before our
-    // post-await code runs, then we'd flip scanning back to `true` with
-    // no future `finished` event to clear it — spinner stuck forever.
-    await load();
-    return src;
+    try {
+      const src = await api.addSource(args);
+      // Spinner is driven entirely by the backend's `source-scan-started` /
+      // `source-scan-finished` events. Manually marking here used to race
+      // the events for tiny files: backend emits both events before our
+      // post-await code runs, then we'd flip scanning back to `true` with
+      // no future `finished` event to clear it — spinner stuck forever.
+      await load();
+      toast.success(t('toast.sourceAdded', { label: src.label || src.path }));
+      return src;
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   async function removeSource(sourceId: string) {
-    await api.removeSource(sourceId);
-    await load();
+    try {
+      await api.removeSource(sourceId);
+      await load();
+      toast.success(t('toast.sourceRemoved'));
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   async function updateSource(args: {
@@ -63,29 +84,59 @@ export const useSettingsStore = defineStore('settings', () => {
     projectRoot?: string | null;
     color?: string | null;
   }): Promise<Source> {
-    const src = await api.updateSource(args);
-    await load();
-    return src;
+    try {
+      const src = await api.updateSource(args);
+      await load();
+      toast.success(t('toast.sourceUpdated'));
+      return src;
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   async function setDefaultSource(sourceId: string | null) {
-    await api.setDefaultSource(sourceId);
-    await load();
+    try {
+      await api.setDefaultSource(sourceId);
+      await load();
+      if (sourceId) toast.success(t('toast.sourceDefaultSet'));
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   async function reorderSources(orderedIds: string[]) {
-    await api.reorderSources(orderedIds);
-    await load();
+    try {
+      await api.reorderSources(orderedIds);
+      await load();
+      toast.success(t('toast.sourceReordered'));
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   async function setFileLabel(filePath: string, label: string | null) {
-    await api.setFileLabel(filePath, label);
-    await load();
+    try {
+      await api.setFileLabel(filePath, label);
+      await load();
+      toast.success(t('toast.fileLabelSet'));
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   async function setEnabledQuickActions(actions: QuickActionKind[]) {
-    await api.setEnabledQuickActions(actions);
-    await load();
+    try {
+      await api.setEnabledQuickActions(actions);
+      await load();
+      toast.success(t('toast.quickActionsUpdated'));
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   async function setAlwaysOnTop(on: boolean) {
@@ -97,8 +148,14 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function setHubFolder(path: string | null) {
-    await api.setHubFolder(path);
-    await load();
+    try {
+      await api.setHubFolder(path);
+      await load();
+      toast.success(path === null ? t('toast.hubCleared') : t('toast.hubSet'));
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
 
   const autoCreateQuadrantHeaders = computed(
@@ -113,8 +170,14 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function resyncHub() {
-    await api.resyncHub();
-    await load();
+    try {
+      await api.resyncHub();
+      await load();
+      toast.success(t('toast.hubResynced'));
+    } catch (e) {
+      failed(e);
+      throw e;
+    }
   }
   /// Open the OS folder picker and use the result as the new hub folder.
   /// Returns the chosen path, or null if the picker was cancelled.

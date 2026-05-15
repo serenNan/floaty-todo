@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { listen, emit, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { Task, AppConfig, Source, SourceKind, QuickActionKind, Quadrant } from '../types/task';
 import type { HistoryEvent } from '../types/history';
@@ -109,4 +109,7 @@ export const api = {
     listen<string>('source-scan-started', e => cb(e.payload)),
   onSourceScanFinished: (cb: (sourceId: string) => void): Promise<UnlistenFn> =>
     listen<string>('source-scan-finished', e => cb(e.payload)),
+  emitHistorySeen: (): Promise<void> => emit('history-seen-changed'),
+  onHistorySeenChanged: (cb: () => void): Promise<UnlistenFn> =>
+    listen('history-seen-changed', cb),
 };

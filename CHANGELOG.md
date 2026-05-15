@@ -1,5 +1,32 @@
 # 变更日志
 
+## 2026-05-15 feat：toast 气泡反馈系统 + 历史按钮未读外部修改红点
+
+- **toast 核心**：新增 `useToast.ts` 模块级单例 + `ToastContainer.vue` 全局
+  组件，4 个变体（success 2s 绿 / info 3s 灰 / warning 4s 琥珀+深字 / error 6s 红），
+  整块色填充 + 进场弹性 translateY + 离场 scale fade + `.toast-move` FLIP 给兄弟
+  平滑滑位；`MAX_VISIBLE = 3`，hover 暂停剩余计时，× 悬浮可见。容器
+  `bottom: 52px` 压在 footer 上方居中，`align-items: center` 让宽度自适应内容
+  的 toast 各自居中堆叠；toast 本身 `inline-flex` 无 `min-width` —— 短消息窄
+  气泡、长消息撑到 `max-width: 100%`
+- **挂载**：主窗口 `App.vue` + 历史窗口 `HistoryView.vue` 两个 root 各挂一次
+  （per-window 队列；触发动作的窗口出自己的反馈）
+- **接入点**：`stores/tasks.ts` (toggle / update / add) / `stores/settings.ts`
+  (source CRUD / hub / quick actions) / `stores/history.ts` (undo / redo /
+  jumpTo) 全部成功/失败 toast；i18n 走模块级 `i18n.global.t`（Pinia setup 不能
+  用 `useI18n()`，store 在 `main.ts` 模块级实例化，没有 component context）
+- **i18n**：`toast.*` namespace 加 21 个 key（en/zh 双语），`taskCompleted /
+  taskUncompleted / taskMoved` 等带 `{text}` `{quadrant}` 占位
+- **历史按钮未读红点**：`useHistoryStore` 扩展 `lastSeenAt`（localStorage
+  `floaty.history.lastSeenAt`）/ `unseenExternal` computed / `markSeen()` /
+  `syncLastSeenFromStorage()`；`HistoryView.vue` `onMounted` 之后立即
+  `markSeen()` + 前端 `emit('history-seen-changed')` 广播；主窗口 `App.vue`
+  listen 后调 `syncLastSeenFromStorage()` → `unseenExternal` 重新算 → 0 →
+  红点消失。`TaskList.vue` `.history-btn::before` 左上红点 + 既有 `::after`
+  右上绿点（hasRedo）位置对称可同时显示
+- **Tauri 跨窗口事件**：`tauri-api.ts` 加 `emitHistorySeen()` / `onHistorySeenChanged()`；
+  Tauri 2 前端 `@tauri-apps/api/event.emit` 默认跨窗口广播，**Rust 后端无改动**
+
 ## 2026-05-15 docs：toast 气泡系统 + 历史未读徽章 设计文档 + 实现计划
 
 - 新增 `docs/superpowers/specs/2026-05-15-toast-notifications-design.md`：

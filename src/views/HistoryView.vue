@@ -6,6 +6,7 @@ import { useTheme } from '../composables/useTheme';
 import { api } from '../services/tauri-api';
 import { confirm } from '../composables/useConfirm';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import ToastContainer from '../components/ToastContainer.vue';
 import { errorCode, errorField } from '../utils/errors';
 import type { HistoryEvent, LineSnapshot } from '../types/history';
 import type { Quadrant } from '../types/task';
@@ -127,6 +128,7 @@ onMounted(async () => {
   await settings.load();
   await history.refresh();
   selectedId.value = history.events[0]?.id ?? null;
+  history.markSeen();
   unlisteners.push(await api.onHistoryUpdated(() => history.refresh()));
 });
 
@@ -212,6 +214,7 @@ onUnmounted(() => {
       <div v-else class="empty-detail">No history yet.</div>
     </section>
     <ConfirmDialog />
+    <ToastContainer />
   </main>
 </template>
 

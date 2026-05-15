@@ -102,6 +102,14 @@ async function openHistory() {
   catch (e) { console.warn('openHistoryWindow failed:', e); }
 }
 
+const historyTitle = computed(() => {
+  const parts = ['History (Ctrl+H)'];
+  if (history.unseenExternal > 0) {
+    parts.push(`${history.unseenExternal} 条未看过的外部修改`);
+  }
+  return parts.join(' · ');
+});
+
 // "Collapse all" toggles based on a local guess of state. We don't track
 // every individual collapsed flag — the trigger just broadcasts.
 const allCollapsed = ref(false);
@@ -187,9 +195,9 @@ function toggleCollapseAll() {
       <span class="spacer"></span>
       <button
         class="footer-btn icon-only history-btn"
-        :class="{ redo: history.hasRedo }"
+        :class="{ redo: history.hasRedo, unseen: history.unseenExternal > 0 }"
         @click="openHistory"
-        title="History (Ctrl+H)"
+        :title="historyTitle"
       >
         <span aria-hidden="true">🕒</span>
       </button>
@@ -405,6 +413,15 @@ function toggleCollapseAll() {
   background: #16a34a;
   position: absolute;
   transform: translate(9px, -8px);
+}
+.history-btn.unseen::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  position: absolute;
+  transform: translate(-9px, -8px);
 }
 
 /* Brand hover ring picks up the icon's own colour, mirroring the

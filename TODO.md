@@ -7,7 +7,6 @@
 
 - [x] **dev-test 这一轮新功能**：collapse-all、drag-to-reorder、reveal-in-explorer、hub-reveal、全 header click、宽度翻倍 —— 跑 `npm run tauri dev` 实际过一遍，确认没有视觉残留
 - [x] 修复拖动bug
-- [ ] 历史记录面板完善
 
 ## 🟡 重要不紧急
 
@@ -19,6 +18,7 @@
 - [ ] **[v0.3] Obsidian Tasks emoji 只读识别**：⏫ / 📅 / 🔁 等元数据解析为 UI 徽章，不改原文
 - [ ] **[v1.0] 拖拽排序整个 source**（不只是 quick-action 按钮）—— 让用户调整 source 在 TaskList 里的显示顺序
 - [ ] **[v2.0] 配套 Claude Code skill (todo skill)**：写一个标准 skill 教 Claude 怎么遵守 PLAN.md 第十节的约定（行号稳定 / 不加 emoji 元数据等）
+- [ ] 历史记录面板完善
 
 ## 🟠 紧急不重要
 

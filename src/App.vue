@@ -11,6 +11,7 @@ import SettingsView from './views/SettingsView.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import TaskEditorDialog from './components/TaskEditorDialog.vue';
 import QuickAddDialog from './components/QuickAddDialog.vue';
+import ToastContainer from './components/ToastContainer.vue';
 
 type View = 'tasks' | 'settings';
 
@@ -30,6 +31,7 @@ onMounted(async () => {
   await history.refresh();
   unlisteners.push(await api.onTasksUpdated(() => { tasks.silentRefresh(); }));
   unlisteners.push(await api.onHistoryUpdated(() => { history.refresh(); }));
+  unlisteners.push(await api.onHistorySeenChanged(() => { history.syncLastSeenFromStorage(); }));
   unlisteners.push(await api.onSourcesChanged(async () => {
     await settings.load();
     await tasks.silentRefresh();
@@ -75,6 +77,7 @@ function backToTasks() { view.value = 'tasks'; }
     <ConfirmDialog />
     <TaskEditorDialog />
     <QuickAddDialog />
+    <ToastContainer />
   </main>
 </template>
 

@@ -27,7 +27,7 @@ export const api = {
       quadrant: quadrant ?? null,
     });
   },
-  deleteTask: (taskId: string) => invoke<void>("delete_task", { taskId }),
+  deleteTask: (taskId: string) => invoke<void>('delete_task', { taskId }),
 
   getHistory: (limit = 500, beforeId?: string | null) =>
     invoke<HistoryEvent[]>('get_history', { limit, beforeId: beforeId ?? null }),

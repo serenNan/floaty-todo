@@ -1,5 +1,65 @@
 # 变更日志
 
+## 2026-05-15 hover tint 跟随 source 强调色
+
+- TaskItem `.row:hover` + FileGroup `.head:hover` 的背景换成
+  `color-mix(in srgb, var(--src-color, var(--accent)) 14%, transparent)`，
+  让 hover 与所在 source 卡片的 `--src-color` 保持同色系；未设强调色
+  的 source 自动 fallback 到 `--accent`（中性灰）
+- 旧实现用 `--surface-strong`（0.92 alpha 近实色），叠在卡片半透明
+  body 上变成厚重色块，深色主题下完成行尤其突兀
+- 顺带去掉 `.row` 的 `border-bottom: 1px solid transparent` 与 hover
+  时的 `border-bottom-color` 切换，hover 不再多出一条分割线
+
+## 2026-05-15 source 内四象限分组 (Eisenhower view)
+
+每个 markdown source 内部按艾森豪威尔矩阵分四组渲染 — `## 🔴 紧急+重要` /
+`## 🟡 重要不紧急` / `## 🟠 紧急不重要` / `## 🟢 不紧急不重要` 任意层级 header
+都识别, 子标题继承父标题象限, 任务上方没出现过 quadrant header → ⚪ 未分类。
+零 sidecar、不动任务行 emoji 元数据 — 跟 PLAN.md 第十节的 AI 集成约定一致,
+跟 `/todo` skill 写出来的文件结构天然兼容。
+
+合并自 `feature/quadrant-view` (15 commits, merge `7692051`)。设计文档见
+`docs/superpowers/specs/2026-05-15-quadrant-view-design.md`, 实施计划见
+`docs/superpowers/plans/2026-05-15-quadrant-view.md`。
+
+### 后端
+- `types.rs`: `Quadrant` enum (`urgent_important` / `not_urgent_important` /
+  `urgent_not_important` / `not_urgent_not_important`, snake_case 序列化),
+  `Task.quadrant: Option<Quadrant>` (serde default → None), `AppConfig.
+  auto_create_quadrant_headers: bool` (默认 true)
+- `parser.rs`: stateful scan — 任意级别 header 文字含 🔴🟡🟠🟢 之一就更新
+  `current_quadrant`, 否则保持 (子标题继承); 任务行打当前 quadrant; 7 个新
+  单测覆盖嵌套继承、多次出现合并、emoji 任意位置、混合 emoji 取第一个等
+- `storage.rs`: `append_task_to_quadrant(path, text, quadrant, auto_create)`
+  — 找到对应 quadrant header 在 section 末尾(下一个同级 header 前)插入;
+  header 不存在 + auto_create 则在 EOF 追加 `## <emoji> <中文名>` 块。`None`
+  fallback 到原 `append_task`。6 个新单测
+- `commands.rs`: `add_task` 接受可选 `quadrant: Option<Quadrant>`, 调用
+  `append_task_to_quadrant` 并传入 config 的 `auto_create_quadrant_headers`
+- `error.rs`: 新增 `QuadrantHeaderMissing(Quadrant)` 变体
+
+### 前端
+- `src/components/QuadrantGroup.vue` (新): 折叠分组 (复用 `useCollapse` 响应
+  全局 collapse-all), emoji + 中文名 + count badge; `tasks.length === 0` →
+  整组不渲染 (空象限自动消失)
+- `SourceGroup.vue` / `FileGroup.vue`: file source 直接 `QuadrantGroup × ≤5`,
+  folder source 在 `FileGroup` 内嵌 `QuadrantGroup × ≤5`; 渲染顺序固定
+  🔴 → 🟡 → 🟠 → 🟢 → ⚪
+- `TaskList.vue`: QuickAdd 加 5 个 emoji 按钮选择器, 选中态高亮; 选择持久化
+  到 localStorage `floaty.lastQuadrant`, 首次启动默认 ⚪
+- `services/tauri-api.ts` + `stores/tasks.ts`: `addTask` / `add` 接受第三个
+  可选参数 `quadrant`, 后端 None fallback 到原行为
+- `stores/settings.ts`: `autoCreateQuadrantHeaders` computed + setter
+- `SettingsView.vue`: 新 "Behavior" section, 暴露 auto-create-headers 开关
+- i18n: `quadrant.*` (5 个名称) + `settings.behavior` + `settings.
+  auto_create_quadrant_headers{,_help}` (en/zh)
+
+### Merge 整理
+- `SourceGroup.vue` import 区两边都加东西的冲突, 共存解决
+- `SettingsView.vue` 清掉 `safeHexColor` dead import (`0315e12` commit 引入
+  但未使用; vue-tsc strict 模式在 merge 后才暴露)
+
 ## 2026-05-15 source 自定义强调色
 
 - `Source` 加 `color: Option<String>` 字段（hex 形式 `#xxx[xxx[xx]]`），

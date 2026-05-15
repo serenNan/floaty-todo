@@ -67,12 +67,15 @@ async function openLink(href: string) {
   border-radius: 0;
   transition: background 120ms ease-out;
   animation: fadeIn 140ms ease-out;
-  border-bottom: 1px solid transparent;
 }
 
+/* Hover tint inherits the parent SourceGroup's --src-color CSS var
+   (set by `:style="--src-color: …"` on `.group.colored`). When no source
+   color is configured, fall back to --accent so plain rows still get the
+   neutral grey tint. ~14% mix matches the strength of --accent-soft and
+   stays subtle on the card's semi-transparent body. */
 .row:hover {
-  background: var(--surface-strong);
-  border-bottom-color: var(--border);
+  background: color-mix(in srgb, var(--src-color, var(--accent)) 14%, transparent);
 }
 
 .row.done .text {

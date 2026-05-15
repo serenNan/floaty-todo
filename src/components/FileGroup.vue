@@ -157,7 +157,10 @@ async function clearLabel() {
   cursor: pointer;
   transition: background 120ms ease-out;
 }
-.head:hover { background: var(--surface-strong); }
+/* Tint inherits the parent SourceGroup's --src-color (set by
+   `.group.colored`). Falls back to --accent for non-colored sources so
+   the file header still gets a subtle neutral hover. */
+.head:hover { background: color-mix(in srgb, var(--src-color, var(--accent)) 14%, transparent); }
 
 .caret {
   width: 18px;

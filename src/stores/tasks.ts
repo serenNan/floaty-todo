@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { Task, Quadrant } from '../types/task';
 import { api } from '../services/tauri-api';
+import { errorMessage } from '../utils/errors';
 
 export const useTaskStore = defineStore('tasks', () => {
   const tasks = ref<Task[]>([]);
@@ -22,7 +23,7 @@ export const useTaskStore = defineStore('tasks', () => {
       tasks.value = await api.getTasks();
       error.value = null;
     } catch (e: any) {
-      error.value = String(e);
+      error.value = errorMessage(e);
     }
   }
 
@@ -37,19 +38,19 @@ export const useTaskStore = defineStore('tasks', () => {
 
   async function toggle(id: string) {
     try { await api.toggleTask(id); await silentRefresh(); }
-    catch (e: any) { error.value = String(e); }
+    catch (e: any) { error.value = errorMessage(e); }
   }
 
   async function update(id: string, text: string, quadrant?: Quadrant | null) {
     if (!text.trim()) return;
     try { await api.updateTask(id, text.trim(), quadrant); await silentRefresh(); }
-    catch (e: any) { error.value = String(e); }
+    catch (e: any) { error.value = errorMessage(e); }
   }
 
   async function add(text: string, sourceId?: string, quadrant?: Quadrant | null) {
     if (!text.trim()) return;
     try { await api.addTask(text.trim(), sourceId, quadrant); await silentRefresh(); }
-    catch (e: any) { error.value = String(e); }
+    catch (e: any) { error.value = errorMessage(e); }
   }
 
   return { tasks, sortedTasks, loading, error, refresh, silentRefresh, toggle, update, add };

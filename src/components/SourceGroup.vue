@@ -18,6 +18,7 @@ import { SOURCE_COLORS, safeHexColor } from '../utils/colors';
 import QuadrantGroup from './QuadrantGroup.vue';
 import type { Quadrant } from '../types/task';
 import { openQuickAdd } from '../composables/useQuickAdd';
+import { errorMessage } from '../utils/errors';
 import { useTaskStore } from '../stores/tasks';
 
 const QUADRANT_ORDER: (Quadrant | null)[] = [
@@ -112,14 +113,14 @@ const fileGroups = computed(() => {
 
 async function runAction(kind: QuickActionKind) {
   try { await api.runQuickAction(props.source.id, kind); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 
 async function addTaskHere() {
   const result = await openQuickAdd({ sourceId: props.source.id });
   if (!result) return;
   try { await taskStore.add(result.text, result.sourceId, result.quadrant); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 
 // In-header quick editor — replaces the "jump to Settings page" detour the
@@ -148,7 +149,7 @@ async function saveEdit() {
     });
     editing.value = false;
   } catch (e: any) {
-    actionError.value = String(e);
+    actionError.value = errorMessage(e);
   }
 }
 
@@ -159,7 +160,7 @@ async function pickRoot() {
 
 async function setDefault() {
   try { await settings.setDefaultSource(props.source.id); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 
 async function removeSource() {
@@ -171,7 +172,7 @@ async function removeSource() {
   });
   if (!ok) return;
   try { await settings.removeSource(props.source.id); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 
 // Drag-and-drop reordering for quick-action buttons. The new order is
@@ -215,7 +216,7 @@ async function onActionDrop(e: DragEvent, targetKind: QuickActionKind) {
     order.splice(newTgtIdx, 0, src);
   }
   try { await settings.setEnabledQuickActions(order); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 function onActionDragEnd() {
   dragKind.value = null;
@@ -454,6 +455,7 @@ const colorStyle = computed(() =>
           :tasks="g.tasks"
           :collapse-token="collapseQuadrantToken"
           :expand-token="expandQuadrantToken"
+          :persistence-key="`${source.id}::${source.path}::${g.quadrant ?? 'unsorted'}`"
         />
         <div v-if="tasks.length === 0 && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
       </template>

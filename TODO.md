@@ -7,6 +7,7 @@
 
 - [x] **dev-test 这一轮新功能**：collapse-all、drag-to-reorder、reveal-in-explorer、hub-reveal、全 header click、宽度翻倍 —— 跑 `npm run tauri dev` 实际过一遍，确认没有视觉残留
 - [x] 修复拖动bug
+- [ ] 历史记录面板完善
 
 ## 🟡 重要不紧急
 
@@ -38,6 +39,7 @@
 - [ ] **i18n 字符串 hardcoded 在 useConfirm**：confirm.removeSource* 等键值散在 useConfirm 调用方，提一个统一 helper
 - [ ] **dev 端口 1422 写死**：之前为避开 WishTalk 的 1420 改的；可以做一个端口自适应
 - [ ] 添加一个自动总结功能
+- [ ] 测试
 
 ## 设计上明确「不做」
 

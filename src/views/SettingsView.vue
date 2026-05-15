@@ -11,6 +11,7 @@ import Icon from '../components/icons/Icon.vue';
 import type { IconName } from '../components/icons/Icon.vue';
 import type { QuickActionKind, Source } from '../types/task';
 import { SOURCE_COLORS } from '../utils/colors';
+import { errorMessage } from '../utils/errors';
 
 defineEmits<{ back: [] }>();
 
@@ -65,21 +66,21 @@ async function pickHubFolder() {
   hubError.value = null;
   hubBusy.value = true;
   try { await settings.pickAndSetHubFolder(); }
-  catch (e: any) { hubError.value = String(e); }
+  catch (e: any) { hubError.value = errorMessage(e); }
   finally { hubBusy.value = false; }
 }
 async function clearHubFolder() {
   hubError.value = null;
   hubBusy.value = true;
   try { await settings.setHubFolder(null); }
-  catch (e: any) { hubError.value = String(e); }
+  catch (e: any) { hubError.value = errorMessage(e); }
   finally { hubBusy.value = false; }
 }
 async function resyncHub() {
   hubError.value = null;
   hubBusy.value = true;
   try { await settings.resyncHub(); }
-  catch (e: any) { hubError.value = String(e); }
+  catch (e: any) { hubError.value = errorMessage(e); }
   finally { hubBusy.value = false; }
 }
 
@@ -120,7 +121,7 @@ async function saveEdit(s: Source) {
     });
     editingId.value = null;
   } catch (e: any) {
-    actionError.value = String(e);
+    actionError.value = errorMessage(e);
   }
 }
 
@@ -131,7 +132,7 @@ async function pickRoot() {
 
 async function setDefault(s: Source) {
   try { await settings.setDefaultSource(s.id); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 
 async function removeSource(s: Source) {
@@ -146,7 +147,7 @@ async function removeSource(s: Source) {
     await settings.removeSource(s.id);
     if (editingId.value === s.id) editingId.value = null;
   } catch (e: any) {
-    actionError.value = String(e);
+    actionError.value = errorMessage(e);
   }
 }
 
@@ -154,26 +155,26 @@ async function addFolder() {
   try {
     const src = await settings.pickAndAddFolder();
     if (!src) return;
-  } catch (e: any) { actionError.value = String(e); }
+  } catch (e: any) { actionError.value = errorMessage(e); }
 }
 async function addFile() {
   try {
     const src = await settings.pickAndAddFile();
     if (!src) return;
-  } catch (e: any) { actionError.value = String(e); }
+  } catch (e: any) { actionError.value = errorMessage(e); }
 }
 
 async function openVscode(s: Source) {
   try { await api.openInVscode(s.id); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 async function openTerminal(s: Source) {
   try { await api.openInTerminal(s.id); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 async function revealSource(s: Source) {
   try { await api.runQuickAction(s.id, 'reveal'); }
-  catch (e: any) { actionError.value = String(e); }
+  catch (e: any) { actionError.value = errorMessage(e); }
 }
 </script>
 

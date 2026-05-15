@@ -13,11 +13,29 @@ const props = withDefaults(defineProps<{
   // Default 0 → watches never fire until the parent acts.
   collapseToken?: number;
   expandToken?: number;
-}>(), { collapseToken: 0, expandToken: 0 });
+  // Stable identity for persisting the collapse state across remounts
+  // (source collapse/expand) and across app restarts. Empty = no persist.
+  persistenceKey?: string;
+}>(), { collapseToken: 0, expandToken: 0, persistenceKey: '' });
 
 const { t } = useI18n();
 
-const collapsed = ref(true);
+const STORAGE_PREFIX = 'floaty.qcollapse.';
+
+function loadCollapsed(): boolean {
+  if (!props.persistenceKey) return true;
+  try {
+    const v = localStorage.getItem(STORAGE_PREFIX + props.persistenceKey);
+    return v === null ? true : v === '1';
+  } catch { return true; }
+}
+
+const collapsed = ref(loadCollapsed());
+watch(collapsed, (v) => {
+  if (!props.persistenceKey) return;
+  try { localStorage.setItem(STORAGE_PREFIX + props.persistenceKey, v ? '1' : '0'); } catch {}
+});
+
 bindCollapse((v) => { collapsed.value = v; });
 watch(() => props.collapseToken, () => { collapsed.value = true; });
 watch(() => props.expandToken, () => { collapsed.value = false; });

@@ -1,19 +1,29 @@
 use crate::config;
 use crate::error::{AppError, Result};
+use crate::history::{self, HistoryAction, HistoryEvent, HistoryStore, JumpDirection, LineSnapshot};
 use crate::registry::TaskRegistry;
 use crate::storage;
 use crate::types::{file_label_key, AppConfig, QuickActionKind, Source, SourceKind, Task};
 use crate::watcher::IgnoreHashes;
 use crate::{spawn_source_scan_and_watcher, WatcherSlots};
-use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, RwLock};
 use tauri::{AppHandle, Emitter, Manager, State};
+
+#[derive(Debug, serde::Serialize)]
+pub struct JumpResult {
+    pub undone_count: usize,
+    pub redone_count: usize,
+    pub skipped_external: usize,
+}
 
 pub struct AppState {
     pub registry: Arc<RwLock<TaskRegistry>>,
     pub config: Arc<RwLock<AppConfig>>,
+    pub history: Arc<Mutex<HistoryStore>>,
     pub ignore_hashes: IgnoreHashes,
     pub config_path: PathBuf,
+    pub app_data_dir: PathBuf,
 }
 
 #[tauri::command]
@@ -34,15 +44,29 @@ pub fn update_config(state: State<'_, AppState>, new_config: AppConfig) -> Resul
 }
 
 #[tauri::command]
-pub fn toggle_task(state: State<'_, AppState>, task_id: String) -> Result<()> {
+pub fn toggle_task(state: State<'_, AppState>, app: AppHandle, task_id: String) -> Result<()> {
     let task = {
         let reg = state.registry.read().unwrap();
         reg.get(&task_id).cloned().ok_or_else(|| AppError::TaskNotFound(task_id.clone()))?
     };
     let source = find_source_by_id(&state, &task.source_id)?;
-    let new_hash = storage::toggle_task(&task.source_file, task.line_number)?;
-    state.ignore_hashes.register(new_hash);
+    let mut result = storage::toggle_task(&task.source_file, task.line_number)?;
+    result.before = snapshot_with_quadrant(result.before, task.quadrant);
+    result.after = snapshot_with_quadrant(result.after, task.quadrant);
+    state.ignore_hashes.register(result.new_hash);
+    record_snapshot(&state, &task.source_file);
     state.registry.write().unwrap().refresh_file(&source, &task.source_file)?;
+    push_history(
+        &state,
+        &app,
+        task.source_id.clone(),
+        task.source_file.clone(),
+        HistoryAction::Toggle {
+            task_id,
+            before: result.before,
+            after: result.after,
+        },
+    )?;
     Ok(())
 }
 
@@ -63,6 +87,7 @@ pub fn toggle_task(state: State<'_, AppState>, task_id: String) -> Result<()> {
 #[tauri::command]
 pub fn update_task(
     state: State<'_, AppState>,
+    app: AppHandle,
     task_id: String,
     new_text: String,
     change_quadrant: bool,
@@ -77,9 +102,23 @@ pub fn update_task(
     let quadrant_changing = change_quadrant && new_quadrant != task.quadrant;
 
     if !quadrant_changing {
-        let new_hash = storage::update_task_text(&task.source_file, task.line_number, &new_text)?;
-        state.ignore_hashes.register(new_hash);
+        let mut result = storage::update_task_text(&task.source_file, task.line_number, &new_text)?;
+        result.before = snapshot_with_quadrant(result.before, task.quadrant);
+        result.after = snapshot_with_quadrant(result.after, task.quadrant);
+        state.ignore_hashes.register(result.new_hash);
+        record_snapshot(&state, &task.source_file);
         state.registry.write().unwrap().refresh_file(&source, &task.source_file)?;
+        push_history(
+            &state,
+            &app,
+            task.source_id.clone(),
+            task.source_file.clone(),
+            HistoryAction::Edit {
+                task_id,
+                before: result.before,
+                after: result.after,
+            },
+        )?;
         return Ok(());
     }
 
@@ -89,16 +128,29 @@ pub fn update_task(
     // header auto-creation honours the user's `auto_create_quadrant_headers`
     // preference exactly like new-task creation does.
     let auto_create_headers = state.config.read().unwrap().auto_create_quadrant_headers;
-    let hash_after_delete = storage::remove_task_line(&task.source_file, task.line_number)?;
-    state.ignore_hashes.register(hash_after_delete);
-    let final_hash = storage::append_task_to_quadrant(
+    let mut move_result = storage::move_task_to_quadrant(
         &task.source_file,
+        task.line_number,
         &new_text,
         new_quadrant,
         auto_create_headers,
     )?;
-    state.ignore_hashes.register(final_hash);
+    move_result.before = snapshot_with_quadrant(move_result.before, task.quadrant);
+    move_result.after = snapshot_with_quadrant(move_result.after, new_quadrant);
+    state.ignore_hashes.register(move_result.new_hash);
+    record_snapshot(&state, &task.source_file);
     state.registry.write().unwrap().refresh_file(&source, &task.source_file)?;
+    push_history(
+        &state,
+        &app,
+        task.source_id.clone(),
+        task.source_file.clone(),
+        HistoryAction::Move {
+            task_id,
+            before: move_result.before,
+            after: move_result.after,
+        },
+    )?;
     Ok(())
 }
 
@@ -108,6 +160,7 @@ pub fn update_task(
 #[tauri::command]
 pub fn add_task(
     state: State<'_, AppState>,
+    app: AppHandle,
     text: String,
     source_id: Option<String>,
     quadrant: Option<crate::types::Quadrant>,
@@ -128,14 +181,184 @@ pub fn add_task(
         SourceKind::Folder => source.path.join(&cfg.inbox_file),
         SourceKind::File => source.path.clone(),
     };
-    let new_hash = storage::append_task_to_quadrant(
+    let mut result = storage::append_task_to_quadrant(
         &target_file,
         &text,
         quadrant,
         cfg.auto_create_quadrant_headers,
     )?;
-    state.ignore_hashes.register(new_hash);
+    result.after = snapshot_with_quadrant(result.after, quadrant);
+    state.ignore_hashes.register(result.new_hash);
+    record_snapshot(&state, &target_file);
     state.registry.write().unwrap().refresh_file(&source, &target_file)?;
+    push_history(
+        &state,
+        &app,
+        source.id.clone(),
+        target_file,
+        HistoryAction::Add {
+            after: result.after,
+        },
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_history(
+    state: State<'_, AppState>,
+    limit: usize,
+    before_id: Option<String>,
+) -> Result<Vec<HistoryEvent>> {
+    Ok(state
+        .history
+        .lock()
+        .unwrap()
+        .list(limit, before_id.as_deref()))
+}
+
+#[tauri::command]
+pub fn get_history_cursor(state: State<'_, AppState>) -> Result<Option<String>> {
+    Ok(state.history.lock().unwrap().cursor_id_owned())
+}
+
+#[tauri::command]
+pub fn undo(state: State<'_, AppState>, app: AppHandle) -> Result<Option<HistoryEvent>> {
+    // peek/commit pattern: only advance the cursor after apply_reverse
+    // succeeds. On failure (e.g. HistoryHashMismatch), nothing was committed,
+    // so the cursor stays exactly where it was — no drift, retry is clean.
+    let event = { state.history.lock().unwrap().peek_undo() };
+    let Some(event) = event else {
+        return Ok(None);
+    };
+
+    let hash = history::apply_reverse(&event)?;
+    if let Some(hash) = hash {
+        state.ignore_hashes.register(hash);
+        record_snapshot(&state, &event.file);
+        refresh_history_file(&state, &app, &event)?;
+    }
+    state.history.lock().unwrap().commit_undo(&event.id)?;
+    let _ = app.emit("history-updated", ());
+    Ok(Some(event))
+}
+
+#[tauri::command]
+pub fn redo(state: State<'_, AppState>, app: AppHandle) -> Result<Option<HistoryEvent>> {
+    let event = { state.history.lock().unwrap().peek_redo() };
+    let Some(event) = event else {
+        return Ok(None);
+    };
+
+    let hash = history::apply_forward(&event)?;
+    if let Some(hash) = hash {
+        state.ignore_hashes.register(hash);
+        record_snapshot(&state, &event.file);
+        refresh_history_file(&state, &app, &event)?;
+    }
+    state.history.lock().unwrap().commit_redo(&event.id)?;
+    let _ = app.emit("history-updated", ());
+    Ok(Some(event))
+}
+
+#[tauri::command]
+pub fn jump_to(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    event_id: String,
+    confirm_external: bool,
+) -> Result<JumpResult> {
+    let plan = {
+        state
+            .history
+            .lock()
+            .unwrap()
+            .jump_plan(&event_id)
+            .ok_or_else(|| AppError::CommandFailed("history event not found".into()))?
+    };
+    if plan.external_count > 0 && !confirm_external {
+        return Err(AppError::ExternalInUndoRange {
+            count: plan.external_count,
+        });
+    }
+
+    let mut result = JumpResult {
+        undone_count: 0,
+        redone_count: 0,
+        skipped_external: 0,
+    };
+    // Touched files — used to emit ONE tasks-updated at the end instead of
+    // one per event (previous impl spammed N events for multi-step jumps).
+    let mut touched: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+
+    for event in plan.events {
+        if event.action.is_external() {
+            result.skipped_external += 1;
+        } else {
+            let applied = match plan.direction {
+                JumpDirection::Undo => history::apply_reverse(&event),
+                JumpDirection::Redo => history::apply_forward(&event),
+            }?;
+            if let Some(hash) = applied {
+                state.ignore_hashes.register(hash);
+                record_snapshot(&state, &event.file);
+                touched.insert(event.file.clone());
+            }
+            match plan.direction {
+                JumpDirection::Undo => result.undone_count += 1,
+                JumpDirection::Redo => result.redone_count += 1,
+            }
+        }
+
+        let mut history = state.history.lock().unwrap();
+        match plan.direction {
+            JumpDirection::Undo => history.commit_undo(&event.id)?,
+            JumpDirection::Redo => history.commit_redo(&event.id)?,
+        }
+    }
+
+    // Single batch refresh + emit at the end.
+    if !touched.is_empty() {
+        for file in &touched {
+            if let Ok(source) = find_source_by_file(&state, file) {
+                let _ = state
+                    .registry
+                    .write()
+                    .unwrap()
+                    .refresh_file(&source, file);
+            }
+        }
+        let _ = app.emit("tasks-updated", ());
+    }
+    let _ = app.emit("history-updated", ());
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn open_history_window(app: AppHandle) -> Result<()> {
+    if let Some(w) = app.get_webview_window("history") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+
+    // Create hidden — the renderer will call `getCurrentWindow().show()` after
+    // first paint (see HistoryView.vue), so the user never sees the webview's
+    // default white background while our dark-theme CSS is still loading.
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        "history",
+        tauri::WebviewUrl::App("index.html".into()),
+    )
+    .title("Floaty Todo - History")
+    .inner_size(680.0, 520.0)
+    .resizable(true)
+    .visible(false)
+    .decorations(true)
+    .always_on_top(false)
+    .build()
+    .map_err(|e| AppError::CommandFailed(e.to_string()))?;
+
     Ok(())
 }
 
@@ -222,6 +445,7 @@ pub fn add_source(
         source.clone(),
         app.clone(),
         state.registry.clone(),
+        state.history.clone(),
         state.ignore_hashes.clone(),
         watcher_slots.inner().clone(),
     );
@@ -483,7 +707,13 @@ pub fn set_hub_folder(
     if let Some(hub) = &canonical {
         crate::hub::sync_all(hub, &sources_snapshot)?;
     }
+    state
+        .history
+        .lock()
+        .unwrap()
+        .reopen(canonical.as_deref(), &state.app_data_dir)?;
     let _ = app.emit("sources-changed", ());
+    let _ = app.emit("history-updated", ());
     Ok(())
 }
 
@@ -590,6 +820,69 @@ fn find_source_by_id(state: &AppState, source_id: &str) -> Result<Source> {
         .find(|s| s.id == source_id)
         .cloned()
         .ok_or_else(|| AppError::SourceNotFound(source_id.to_string()))
+}
+
+/// Find the source that owns `file`. For a File source the source's path
+/// equals the file; for a Folder source the file must sit under the folder.
+/// Used by `jump_to` to refresh the registry after a batch of writes.
+fn find_source_by_file(state: &AppState, file: &Path) -> Result<Source> {
+    let cfg = state.config.read().unwrap();
+    cfg.sources
+        .iter()
+        .find(|s| match s.kind {
+            SourceKind::File => s.path == file,
+            SourceKind::Folder => file.starts_with(&s.path),
+        })
+        .cloned()
+        .ok_or_else(|| AppError::SourceNotFound(file.display().to_string()))
+}
+
+/// Refresh the history store's per-file snapshot after a write. The next
+/// external edit on this file will diff against the new content (instead of
+/// reporting the entire file as added/removed).
+fn record_snapshot(state: &AppState, path: &Path) {
+    if let Ok(bytes) = std::fs::read(path) {
+        state
+            .history
+            .lock()
+            .unwrap()
+            .record_file_snapshot(path, bytes);
+    }
+}
+
+fn snapshot_with_quadrant(mut snapshot: LineSnapshot, quadrant: Option<crate::types::Quadrant>) -> LineSnapshot {
+    if let Some(state) = snapshot.state.as_mut() {
+        state.quadrant = quadrant;
+    }
+    snapshot
+}
+
+fn push_history(
+    state: &AppState,
+    app: &AppHandle,
+    source_id: String,
+    file: PathBuf,
+    action: HistoryAction,
+) -> Result<()> {
+    let event = HistoryEvent::new(source_id, file, action);
+    state.history.lock().unwrap().push(event)?;
+    let _ = app.emit("history-updated", ());
+    Ok(())
+}
+
+fn refresh_history_file(
+    state: &AppState,
+    app: &AppHandle,
+    event: &HistoryEvent,
+) -> Result<()> {
+    let source = find_source_by_id(state, &event.source_id)?;
+    state
+        .registry
+        .write()
+        .unwrap()
+        .refresh_file(&source, &event.file)?;
+    let _ = app.emit("tasks-updated", ());
+    Ok(())
 }
 
 /// Run a fallible hub-sync operation and swallow the error. We don't

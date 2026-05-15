@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { Task, AppConfig, Source, SourceKind, QuickActionKind, Quadrant } from '../types/task';
+import type { HistoryEvent } from '../types/history';
 
 export const api = {
   getTasks: () => invoke<Task[]>('get_tasks'),
@@ -26,6 +27,18 @@ export const api = {
       quadrant: quadrant ?? null,
     });
   },
+
+  getHistory: (limit = 500, beforeId?: string | null) =>
+    invoke<HistoryEvent[]>('get_history', { limit, beforeId: beforeId ?? null }),
+  getHistoryCursor: () => invoke<string | null>('get_history_cursor'),
+  undo: () => invoke<HistoryEvent | null>('undo'),
+  redo: () => invoke<HistoryEvent | null>('redo'),
+  jumpTo: (eventId: string, confirmExternal = false) =>
+    invoke<{ undone_count: number; redone_count: number; skipped_external: number }>('jump_to', {
+      eventId,
+      confirmExternal,
+    }),
+  openHistoryWindow: () => invoke<void>('open_history_window'),
 
   listSources: () => invoke<Source[]>('list_sources'),
   addSource: (args: {
@@ -89,6 +102,7 @@ export const api = {
 
   onTasksUpdated: (cb: () => void): Promise<UnlistenFn> => listen('tasks-updated', cb),
   onSourcesChanged: (cb: () => void): Promise<UnlistenFn> => listen('sources-changed', cb),
+  onHistoryUpdated: (cb: () => void): Promise<UnlistenFn> => listen('history-updated', cb),
   onManageSourcesRequested: (cb: () => void): Promise<UnlistenFn> =>
     listen('request-manage-sources', cb),
   onSourceScanStarted: (cb: (sourceId: string) => void): Promise<UnlistenFn> =>

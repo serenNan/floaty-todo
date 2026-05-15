@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useSettingsStore } from './stores/settings';
 import { useTaskStore } from './stores/tasks';
+import { useHistoryStore } from './stores/history';
 import { useTheme } from './composables/useTheme';
 import { api } from './services/tauri-api';
 import EmptyState from './components/EmptyState.vue';
@@ -15,6 +16,7 @@ type View = 'tasks' | 'settings';
 
 const settings = useSettingsStore();
 const tasks = useTaskStore();
+const history = useHistoryStore();
 // Touch useTheme so its system-pref listener mounts at the App root.
 useTheme();
 const hasSources = computed(() => settings.hasSources);
@@ -25,7 +27,9 @@ const unlisteners: Array<() => void> = [];
 onMounted(async () => {
   await settings.load();
   if (hasSources.value) await tasks.refresh();
+  await history.refresh();
   unlisteners.push(await api.onTasksUpdated(() => { tasks.silentRefresh(); }));
+  unlisteners.push(await api.onHistoryUpdated(() => { history.refresh(); }));
   unlisteners.push(await api.onSourcesChanged(async () => {
     await settings.load();
     await tasks.silentRefresh();

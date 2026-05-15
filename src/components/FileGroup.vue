@@ -169,6 +169,7 @@ async function clearLabel() {
         :tasks="g.tasks"
         :collapse-token="collapseToken"
         :expand-token="expandToken"
+        :persistence-key="`${source.id}::${filePath}::${g.quadrant ?? 'unsorted'}`"
       />
       <div v-if="tasks.length === 0" class="empty">{{ t('file.noTasks') }}</div>
     </div>

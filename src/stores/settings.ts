@@ -43,11 +43,11 @@ export const useSettingsStore = defineStore('settings', () => {
     projectRoot?: string | null;
   }): Promise<Source> {
     const src = await api.addSource(args);
-    // Mark the source as scanning *before* `load()` so the SourceGroup
-    // renders the spinner immediately. Backend's `source-scan-finished`
-    // event will clear it; if that event races ahead of us, the worst
-    // case is a brief stale spinner that the next emit clears.
-    markScanning(src.id, true);
+    // Spinner is driven entirely by the backend's `source-scan-started` /
+    // `source-scan-finished` events. Manually marking here used to race
+    // the events for tiny files: backend emits both events before our
+    // post-await code runs, then we'd flip scanning back to `true` with
+    // no future `finished` event to clear it — spinner stuck forever.
     await load();
     return src;
   }

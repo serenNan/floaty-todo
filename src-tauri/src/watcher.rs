@@ -60,6 +60,13 @@ where
 
     let cb = move |res: DebounceEventResult| {
         let events = match res { Ok(e) => e, Err(_) => return };
+        // notify can emit multiple events for a single write (Modify +
+        // ChangeData + IndexerNotify on Windows, for example). The
+        // IgnoreHashes guard is consumed on the FIRST match, so without
+        // deduping the second event for the same path sees an empty ignore
+        // set and gets reported as an external edit — which is exactly the
+        // "every App write produces a phantom external_edit" bug.
+        let mut seen: HashSet<PathBuf> = HashSet::new();
         for ev in events {
             for path in ev.event.paths {
                 if !is_markdown_target(&path) { continue; }
@@ -69,6 +76,10 @@ where
                     if &best_effort_canonical(&path) != target {
                         continue;
                     }
+                }
+
+                if !seen.insert(best_effort_canonical(&path)) {
+                    continue;
                 }
 
                 if !path.exists() {

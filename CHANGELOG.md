@@ -1,5 +1,40 @@
 # 变更日志
 
+## 2026-05-15 feat：任务历史 + 撤销 + 时间线窗口（实现）
+
+- **后端**：新增 `src-tauri/src/history.rs`（`HistoryStore` + 事件 schema +
+  peek/commit 模式 + 双向 jump_plan + atomic persist + 文件快照缓存 +
+  500ms 外部编辑合并窗口）；改造 `storage.rs` 让 toggle/update/append/move
+  返回 before/after `LineSnapshot`，并新增 `replace_line_if_hash` /
+  `remove_line_if_hash` / `insert_line_at` 给撤销路径用；`commands.rs`
+  新增 `get_history` / `get_history_cursor` / `undo` / `redo` / `jump_to` /
+  `open_history_window` 5 个 IPC + 每个写入路径补 `record_snapshot`；
+  `error.rs` 新增 `HistoryHashMismatch` / `HistoryFileMissing` /
+  `HistoryDisabled` / `ExternalInUndoRange{count}` 并改 Serialize 为
+  `{code, message, ...}` 结构化错误
+- **前端**：新增 `HistoryView.vue` 历史窗口（左 timeline + 右 diff + 跳转）、
+  `stores/history.ts` / `types/history.ts` / `utils/errors.ts`；`main.ts`
+  按窗口 label 路由 App vs HistoryView，挂全局 Ctrl+Z / Ctrl+Y /
+  Ctrl+Shift+Z / Ctrl+H 键位；`TaskList.vue` footer 加 🕒 历史按钮（带
+  redo 可用小红点）；所有 store 错误展示从 `String(e)` 换成
+  `errorMessage(e)` 防止结构化错误退化成 `[object Object]`
+- **窗口体验**：`lib.rs` setup 在 app 启动时**预创建** history 窗口为隐藏，
+  关闭按钮拦截走 `hide()`；`main.ts` 全局 `import './styles/main.css'`
+  让 history 窗口也拿到 theme 变量（修复整个窗口白屏）；`open_history_window`
+  简化为 show + setFocus —— 解决「点一下没反应、点两下才开」
+- **review 修复**：① watcher 单回调内 `HashSet<PathBuf>` dedupe 路径，
+  防 notify 多事件让 `IgnoreHashes` 漏出去产生 phantom 外部修改 ②
+  `history.rs::push_external_edit` 兜底内容等同就丢，且首次无 baseline
+  时静默建立而不 emit「整文件 added」误报 ③ history 文件持久化走 tempfile
+  + rename 原子重写，常规 push 走 append-only 快速路径 ④ 撤销 cursor 改
+  peek/commit 模式，apply 失败时 cursor 一动不动无漂移 ⑤ HistoryView 用
+  `useConfirm` 取代 `window.confirm`，区间含外部编辑时弹危险确认 ⑥
+  所有路径用 `dunce::canonicalize` 做 HashMap key
+- **其它**：Codex 顺手做的 QuadrantGroup collapse 持久化（每个 source +
+  file + quadrant 一个 localStorage key）；`stores/settings.addSource`
+  移除 race-prone 的 `markScanning(true)`，统一由 backend
+  `source-scan-started` / `-finished` 事件驱动 spinner
+
 ## 2026-05-15 docs：任务历史 + 撤销 + 时间线窗口 设计文档
 
 - 新增 `docs/superpowers/specs/2026-05-15-task-history-undo-design.md`：

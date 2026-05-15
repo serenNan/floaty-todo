@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod error;
+mod history;
 mod hub;
 mod parser;
 mod registry;
@@ -10,8 +11,9 @@ mod types;
 mod watcher;
 
 use crate::commands::AppState;
+use crate::history::HistoryStore;
 use crate::registry::TaskRegistry;
-use crate::types::Source;
+use crate::types::{Source, SourceKind};
 use crate::watcher::{start_watching_source, IgnoreHashes, WatchEvent, WatcherHandle};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
@@ -25,12 +27,45 @@ use tauri::{
 /// stops the underlying notify backend cleanly.
 pub type WatcherSlots = Arc<Mutex<HashMap<String, WatcherHandle>>>;
 
+/// Read every .md file in `source` and record its current bytes into the
+/// history store's per-file snapshot cache. Called once per source on
+/// startup / add so the first watcher-detected external edit has a
+/// baseline to diff against (instead of reporting `added = full line count`).
+fn snapshot_files_in_source(source: &Source, history: &Arc<Mutex<HistoryStore>>) {
+    let mut store = history.lock().unwrap();
+    match source.kind {
+        SourceKind::File => {
+            if let Ok(bytes) = std::fs::read(&source.path) {
+                store.record_file_snapshot(&source.path, bytes);
+            }
+        }
+        SourceKind::Folder => {
+            for entry in walkdir::WalkDir::new(&source.path)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                    continue;
+                }
+                if let Ok(bytes) = std::fs::read(path) {
+                    store.record_file_snapshot(path, bytes);
+                }
+            }
+        }
+    }
+}
+
 /// Spawn an initial scan + watcher for one source. Replaces any existing entry
 /// in `slots` for the same source id.
 pub(crate) fn spawn_source_scan_and_watcher(
     source: Source,
     app: AppHandle,
     registry: Arc<RwLock<TaskRegistry>>,
+    history: Arc<Mutex<HistoryStore>>,
     ignore: IgnoreHashes,
     slots: WatcherSlots,
 ) {
@@ -44,15 +79,37 @@ pub(crate) fn spawn_source_scan_and_watcher(
             let mut reg = registry.write().unwrap();
             reg.rebuild_source(&source);
         }
+        // Establish baseline file snapshots so the first external_edit fired
+        // by the watcher has something to diff against. Without this the
+        // first edit would report `added = full line count` (everything new).
+        snapshot_files_in_source(&source, &history);
         let _ = app.emit("tasks-updated", ());
         let _ = app.emit("source-scan-finished", source.id.clone());
 
         let app_for_cb = app.clone();
         let registry_for_cb = registry.clone();
+        let history_for_cb = history.clone();
         let src_for_cb = source.clone();
         let handle = start_watching_source(&source, ignore, move |ev| {
             match ev {
-                WatchEvent::Changed(p) | WatchEvent::Deleted(p) => {
+                WatchEvent::Changed(p) => {
+                    let mut reg = registry_for_cb.write().unwrap();
+                    let _ = reg.refresh_file(&src_for_cb, &p);
+                    // Read the new content here, in the watcher thread, so the
+                    // diff_summary actually reflects what changed on disk
+                    // (history.rs's push_external_edit diffs against its cached
+                    // snapshot and updates the cache afterwards). Throttling +
+                    // merge of consecutive edits within 500ms happens inside.
+                    if let Ok(bytes) = std::fs::read(&p) {
+                        let _ = history_for_cb.lock().unwrap().push_external_edit(
+                            src_for_cb.id.clone(),
+                            p.clone(),
+                            bytes,
+                        );
+                        let _ = app_for_cb.emit("history-updated", ());
+                    }
+                }
+                WatchEvent::Deleted(p) => {
                     let mut reg = registry_for_cb.write().unwrap();
                     let _ = reg.refresh_file(&src_for_cb, &p);
                 }
@@ -81,11 +138,17 @@ pub fn run() {
             // ----- Registry + watcher slots
             let registry = Arc::new(RwLock::new(TaskRegistry::new()));
             let ignore_hashes = IgnoreHashes::new();
+            let history = Arc::new(Mutex::new(HistoryStore::open(
+                cfg.hub_folder.as_deref(),
+                &app_config_dir,
+            )?));
             let state = AppState {
                 registry: registry.clone(),
                 config: Arc::new(RwLock::new(cfg.clone())),
+                history: history.clone(),
                 ignore_hashes: ignore_hashes.clone(),
                 config_path: config_path.clone(),
+                app_data_dir: app_config_dir.clone(),
             };
             app.manage(state);
 
@@ -98,6 +161,7 @@ pub fn run() {
                     source,
                     app.handle().clone(),
                     registry.clone(),
+                    history.clone(),
                     ignore_hashes.clone(),
                     watcher_slots.clone(),
                 );
@@ -154,6 +218,35 @@ pub fn run() {
                 });
             }
 
+            // Pre-create the history window hidden so the first click on the
+            // 🕒 button is just a show() — no WebView2 cold-start latency,
+            // no "click once does nothing, need to click again" UX. The
+            // CloseRequested handler turns its close button into hide-only
+            // so the window survives for fast subsequent opens too.
+            if app.get_webview_window("history").is_none() {
+                if let Ok(w) = tauri::WebviewWindowBuilder::new(
+                    app.handle(),
+                    "history",
+                    tauri::WebviewUrl::App("index.html".into()),
+                )
+                .title("Floaty Todo - History")
+                .inner_size(680.0, 520.0)
+                .resizable(true)
+                .visible(false)
+                .decorations(true)
+                .always_on_top(false)
+                .build()
+                {
+                    let w_clone = w.clone();
+                    w.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            api.prevent_close();
+                            let _ = w_clone.hide();
+                        }
+                    });
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -163,6 +256,12 @@ pub fn run() {
             commands::toggle_task,
             commands::update_task,
             commands::add_task,
+            commands::get_history,
+            commands::get_history_cursor,
+            commands::undo,
+            commands::redo,
+            commands::jump_to,
+            commands::open_history_window,
             commands::list_sources,
             commands::add_source,
             commands::remove_source,

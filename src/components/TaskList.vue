@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import type { Task } from '../types/task';
 import { useTaskStore } from '../stores/tasks';
 import { useSettingsStore } from '../stores/settings';
+import { useHistoryStore } from '../stores/history';
 import { api } from '../services/tauri-api';
 import { collapseAll, expandAll } from '../composables/useCollapse';
 import SourceGroup from './SourceGroup.vue';
@@ -15,6 +16,7 @@ defineEmits<{ openSettings: [] }>();
 const { t } = useI18n();
 const tasks = useTaskStore();
 const settings = useSettingsStore();
+const history = useHistoryStore();
 
 const searchQuery = ref('');
 provide('searchQuery', searchQuery);
@@ -94,6 +96,10 @@ async function openHubInClaudeCode() {
 async function revealHub() {
   try { await api.openHub('reveal'); }
   catch (e) { console.warn('openHub reveal failed:', e); }
+}
+async function openHistory() {
+  try { await api.openHistoryWindow(); }
+  catch (e) { console.warn('openHistoryWindow failed:', e); }
 }
 
 // "Collapse all" toggles based on a local guess of state. We don't track
@@ -179,6 +185,14 @@ function toggleCollapseAll() {
         <span class="count-done">{{ t('tasks.doneCount', { n: totals.done }) }}</span>
       </span>
       <span class="spacer"></span>
+      <button
+        class="footer-btn icon-only history-btn"
+        :class="{ redo: history.hasRedo }"
+        @click="openHistory"
+        title="History (Ctrl+H)"
+      >
+        <span aria-hidden="true">◷</span>
+      </button>
       <!-- Hub shortcuts — only show when the user has configured a hub,
            otherwise they have nowhere to point. Brand-coloured so they
            feel like the per-source action buttons above. -->
@@ -353,6 +367,7 @@ function toggleCollapseAll() {
 .spacer { flex: 1; }
 
 .footer-btn {
+  position: relative;
   padding: 0.2rem 0.5rem;
   font-size: 0.85rem;
   background: var(--surface-strong);
@@ -376,6 +391,20 @@ function toggleCollapseAll() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.history-btn {
+  font-size: 15px;
+  font-weight: 700;
+}
+.history-btn.redo::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #16a34a;
+  position: absolute;
+  transform: translate(9px, -8px);
 }
 
 /* Brand hover ring picks up the icon's own colour, mirroring the

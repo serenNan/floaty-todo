@@ -5,9 +5,13 @@ import { useTaskStore } from '../stores/tasks';
 import { api } from '../services/tauri-api';
 import { parseInline } from '../utils/inline-md';
 import { editTask } from '../composables/useTaskEditor';
+import { useI18n } from 'vue-i18n';
+import Icon from './icons/Icon.vue';
+import { confirm } from '../composables/useConfirm';
 
 const props = defineProps<{ task: Task }>();
 const tasks = useTaskStore();
+const { t } = useI18n();
 
 const segments = computed(() => parseInline(props.task.text));
 
@@ -48,6 +52,16 @@ async function onTextClick() {
 async function openLink(href: string) {
   try { await api.openUrl(href); }
   catch (e) { console.warn('openUrl failed:', e); }
+}
+
+async function onDelete() {
+  const ok = await confirm({
+    title: t('confirm.deleteTaskTitle'),
+    message: t('confirm.deleteTaskMessage', { text: props.task.text }),
+    confirmText: t('confirm.deleteTaskConfirm'),
+    danger: true,
+  });
+  if (ok) await tasks.remove(props.task.id);
 }
 </script>
 
@@ -100,6 +114,14 @@ async function openLink(href: string) {
         </template>
       </template>
     </span>
+    <button
+      type="button"
+      class="del-btn"
+      :title="t('confirm.deleteTaskConfirm')"
+      @click.prevent.stop="onDelete"
+    >
+      <Icon name="trash" :size="14" />
+    </button>
   </label>
 </template>
 
@@ -186,5 +208,34 @@ input[type="checkbox"] {
   border: 1px solid var(--border-strong);
   border-radius: 3px;
   margin-top: 3px;
+}
+
+.del-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-top: 1px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease-out, background 120ms ease-out, color 120ms ease-out;
+}
+
+/* Mirrors FileGroup's hover-reveal pencil button: only visible while the row
+   is hovered, so the row stays visually quiet at rest. */
+.row:hover .del-btn {
+  opacity: 1;
+}
+
+.del-btn:hover {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  color: #ef4444;
 }
 </style>

@@ -103,5 +103,18 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  return { tasks, sortedTasks, loading, error, refresh, silentRefresh, toggle, update, add };
+  async function remove(id: string) {
+    const task = tasks.value.find(tk => tk.id === id);
+    const text = task ? trunc(task.text) : '';
+    try {
+      await api.deleteTask(id);
+      await silentRefresh();
+      toast.success(t('toast.taskDeleted', { text }));
+    } catch (e: any) {
+      error.value = errorMessage(e);
+      toast.error(t('toast.operationFailed', { reason: error.value }));
+    }
+  }
+
+  return { tasks, sortedTasks, loading, error, refresh, silentRefresh, toggle, update, add, remove };
 });

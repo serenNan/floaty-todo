@@ -1,5 +1,13 @@
 # 变更日志
 
+## 2026-05-15 搭建 Vitest 前端测试框架
+
+- `npm install -D vitest`：添加 vitest 作为前端单测运行器（项目首个前端测试框架）
+- 新增 `vitest.config.ts`：独立配置（不复用 vite.config.ts），test include
+  pattern `src/**/*.test.ts`，环境 node
+- `package.json` 加 `"test": "vitest run"`：可通过 `npm test` 触发
+- 为「全局快捷键」功能的 `translateKeyEvent` 单测做准备
+
 ## 2026-05-15 新增 CONTRIBUTING.md 与项目级 todo skill
 
 - 新增 `CONTRIBUTING.md`：开发流程与 Claude Code skill 约定（todo skill

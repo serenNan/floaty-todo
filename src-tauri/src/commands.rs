@@ -73,6 +73,7 @@ pub fn add_task(
     state: State<'_, AppState>,
     text: String,
     source_id: Option<String>,
+    quadrant: Option<crate::types::Quadrant>,
 ) -> Result<()> {
     let cfg = state.config.read().unwrap().clone();
     if cfg.sources.is_empty() {
@@ -90,7 +91,12 @@ pub fn add_task(
         SourceKind::Folder => source.path.join(&cfg.inbox_file),
         SourceKind::File => source.path.clone(),
     };
-    let new_hash = storage::append_task(&target_file, &text)?;
+    let new_hash = storage::append_task_to_quadrant(
+        &target_file,
+        &text,
+        quadrant,
+        cfg.auto_create_quadrant_headers,
+    )?;
     state.ignore_hashes.register(new_hash);
     state.registry.write().unwrap().refresh_file(&source, &target_file)?;
     Ok(())

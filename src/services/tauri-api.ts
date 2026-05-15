@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
-import type { Task, AppConfig, Source, SourceKind, QuickActionKind } from '../types/task';
+import type { Task, AppConfig, Source, SourceKind, QuickActionKind, Quadrant } from '../types/task';
 
 export const api = {
   getTasks: () => invoke<Task[]>('get_tasks'),
@@ -10,8 +10,13 @@ export const api = {
   toggleTask: (taskId: string) => invoke<void>('toggle_task', { taskId }),
   updateTask: (taskId: string, newText: string) =>
     invoke<void>('update_task', { taskId, newText }),
-  addTask: (text: string, sourceId?: string) =>
-    invoke<void>('add_task', { text, sourceId: sourceId ?? null }),
+  async addTask(text: string, sourceId?: string, quadrant?: Quadrant | null): Promise<void> {
+    await invoke('add_task', {
+      text,
+      sourceId: sourceId ?? null,
+      quadrant: quadrant ?? null,
+    });
+  },
 
   listSources: () => invoke<Source[]>('list_sources'),
   addSource: (args: {

@@ -1,6 +1,6 @@
 use crate::error::{AppError, Result};
 use crate::parser::parse_line;
-use crate::types::{hash_content, ContentHash};
+use crate::types::{hash_content, ContentHash, Quadrant};
 use std::io::Write;
 use std::path::Path;
 
@@ -146,6 +146,114 @@ pub fn append_task(path: &Path, text: &str) -> Result<ContentHash> {
     atomic_write(path, new_content.as_bytes())
 }
 
+/// CN/emoji label written when auto-creating a quadrant header. Matches the
+/// todo skill template so future re-parses match the same Quadrant.
+fn quadrant_header_label(q: Quadrant) -> &'static str {
+    match q {
+        Quadrant::UrgentImportant => "🔴 紧急+重要",
+        Quadrant::NotUrgentImportant => "🟡 重要不紧急",
+        Quadrant::UrgentNotImportant => "🟠 紧急不重要",
+        Quadrant::NotUrgentNotImportant => "🟢 不紧急不重要",
+    }
+}
+
+/// Find the byte index *just after* the last task / non-empty line inside
+/// the section that begins on `header_line_idx`. Returns the insertion point
+/// (in the original `content`) where a new `- [ ] task\n` should go.
+fn find_section_insertion_point(content: &str, header_line_idx: usize) -> usize {
+    let lines: Vec<&str> = content.split_inclusive('\n').collect();
+    if header_line_idx >= lines.len() {
+        return content.len();
+    }
+    let header_level = lines[header_line_idx]
+        .trim_start()
+        .bytes()
+        .take_while(|b| *b == b'#')
+        .count();
+
+    let mut byte_offset: usize = lines[..=header_line_idx].iter().map(|l| l.len()).sum();
+    let mut last_content_end = byte_offset;
+    for line in &lines[header_line_idx + 1..] {
+        let trimmed = line.trim_start();
+        let next_level = trimmed.bytes().take_while(|b| *b == b'#').count();
+        let is_header = next_level > 0
+            && next_level <= header_level
+            && trimmed.as_bytes().get(next_level) == Some(&b' ');
+        if is_header {
+            return last_content_end;
+        }
+        if !line.trim().is_empty() {
+            last_content_end = byte_offset + line.len();
+        }
+        byte_offset += line.len();
+    }
+    last_content_end
+}
+
+/// Append a task into the section matching `quadrant`. `None` falls back to
+/// the plain `append_task` (file end). `auto_create_header=true` adds a new
+/// `## <emoji> <name>` block at EOF when the requested quadrant is absent.
+pub fn append_task_to_quadrant(
+    path: &Path,
+    text: &str,
+    quadrant: Option<Quadrant>,
+    auto_create_header: bool,
+) -> Result<ContentHash> {
+    let q = match quadrant {
+        None => return append_task(path, text),
+        Some(q) => q,
+    };
+    let trimmed = text.trim();
+    let existing = std::fs::read_to_string(path).unwrap_or_default();
+
+    let mut header_line_idx: Option<usize> = None;
+    for (i, line) in existing.split_inclusive('\n').enumerate() {
+        let stripped = line.trim_end_matches(['\r', '\n']);
+        if let Some(caps) = crate::parser::header_regex().captures(stripped) {
+            if crate::parser::detect_quadrant_pub(caps.get(2).unwrap().as_str()) == Some(q) {
+                header_line_idx = Some(i);
+                break;
+            }
+        }
+    }
+
+    let new_content = match header_line_idx {
+        Some(idx) => {
+            let insert_at = find_section_insertion_point(&existing, idx);
+            let mut s = String::with_capacity(existing.len() + trimmed.len() + 8);
+            s.push_str(&existing[..insert_at]);
+            if !s.ends_with('\n') {
+                s.push('\n');
+            }
+            s.push_str("- [ ] ");
+            s.push_str(trimmed);
+            s.push('\n');
+            s.push_str(&existing[insert_at..]);
+            s
+        }
+        None => {
+            if !auto_create_header {
+                return Err(AppError::QuadrantHeaderMissing(q));
+            }
+            let mut s = existing.clone();
+            if !s.is_empty() && !s.ends_with('\n') {
+                s.push('\n');
+            }
+            if !s.ends_with("\n\n") && !s.is_empty() {
+                s.push('\n');
+            }
+            s.push_str("## ");
+            s.push_str(quadrant_header_label(q));
+            s.push_str("\n\n- [ ] ");
+            s.push_str(trimmed);
+            s.push('\n');
+            s
+        }
+    };
+
+    atomic_write(path, new_content.as_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -282,5 +390,67 @@ mod tests {
         let d = TempDir::new().unwrap();
         let p = write(&d, "a.md", "# heading\n");
         assert!(update_task_text(&p, 1, "anything").is_err());
+    }
+
+    use crate::types::Quadrant;
+
+    #[test]
+    fn append_to_existing_quadrant_inserts_before_next_header() {
+        let d = TempDir::new().unwrap();
+        let original = "## 🔴 Urgent\n- [ ] a\n\n## 🟡 Important\n- [ ] b\n";
+        let p = write(&d, "q.md", original);
+        append_task_to_quadrant(&p, "new", Some(Quadrant::UrgentImportant), true).unwrap();
+        let got = std::fs::read_to_string(&p).unwrap();
+        assert_eq!(
+            got,
+            "## 🔴 Urgent\n- [ ] a\n- [ ] new\n\n## 🟡 Important\n- [ ] b\n"
+        );
+    }
+
+    #[test]
+    fn append_to_last_quadrant_appends_at_eof() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "q.md", "## 🟢 Later\n- [ ] x\n");
+        append_task_to_quadrant(&p, "y", Some(Quadrant::NotUrgentNotImportant), true).unwrap();
+        let got = std::fs::read_to_string(&p).unwrap();
+        assert_eq!(got, "## 🟢 Later\n- [ ] x\n- [ ] y\n");
+    }
+
+    #[test]
+    fn append_to_missing_quadrant_creates_header_when_allowed() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "q.md", "# Notes\n- [ ] keep\n");
+        append_task_to_quadrant(&p, "n", Some(Quadrant::UrgentImportant), true).unwrap();
+        let got = std::fs::read_to_string(&p).unwrap();
+        assert_eq!(
+            got,
+            "# Notes\n- [ ] keep\n\n## 🔴 紧急+重要\n\n- [ ] n\n"
+        );
+    }
+
+    #[test]
+    fn append_to_missing_quadrant_errors_when_disallowed() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "q.md", "# Notes\n");
+        let err = append_task_to_quadrant(&p, "n", Some(Quadrant::UrgentImportant), false);
+        assert!(matches!(err, Err(crate::error::AppError::QuadrantHeaderMissing(_))));
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "# Notes\n");
+    }
+
+    #[test]
+    fn append_quadrant_none_falls_back_to_append_task() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "q.md", "- [ ] one\n");
+        append_task_to_quadrant(&p, "two", None, true).unwrap();
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "- [ ] one\n- [ ] two\n");
+    }
+
+    #[test]
+    fn append_to_quadrant_handles_file_not_ending_in_newline() {
+        let d = TempDir::new().unwrap();
+        let p = write(&d, "q.md", "- [ ] tail"); // no \n
+        append_task_to_quadrant(&p, "z", Some(Quadrant::UrgentImportant), true).unwrap();
+        let got = std::fs::read_to_string(&p).unwrap();
+        assert_eq!(got, "- [ ] tail\n\n## 🔴 紧急+重要\n\n- [ ] z\n");
     }
 }

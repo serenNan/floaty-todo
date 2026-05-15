@@ -10,7 +10,7 @@ import QuickActionIcon from '../components/icons/QuickActionIcon.vue';
 import Icon from '../components/icons/Icon.vue';
 import type { IconName } from '../components/icons/Icon.vue';
 import type { QuickActionKind, Source } from '../types/task';
-import { SOURCE_COLORS, safeHexColor } from '../utils/colors';
+import { SOURCE_COLORS } from '../utils/colors';
 
 defineEmits<{ back: [] }>();
 
@@ -215,6 +215,24 @@ async function revealSource(s: Source) {
           <select :value="locale" @change="pickLocale">
             <option v-for="l in languages" :key="l.value" :value="l.value">{{ l.label }}</option>
           </select>
+        </div>
+      </section>
+
+      <!-- Behavior -->
+      <section class="section">
+        <h3>{{ t('settings.behavior') }}</h3>
+        <div class="qa-list">
+          <label class="qa-row">
+            <input
+              type="checkbox"
+              :checked="settings.autoCreateQuadrantHeaders"
+              @change="(e: Event) => settings.setAutoCreateQuadrantHeaders((e.target as HTMLInputElement).checked)"
+            />
+            <div class="qa-label" style="display:flex;flex-direction:column;gap:2px;">
+              <span>{{ t('settings.auto_create_quadrant_headers') }}</span>
+              <small class="muted" style="font-size:0.72rem;">{{ t('settings.auto_create_quadrant_headers_help') }}</small>
+            </div>
+          </label>
         </div>
       </section>
 

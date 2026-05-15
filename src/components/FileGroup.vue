@@ -2,10 +2,28 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Source, Task } from '../types/task';
+import type { Quadrant } from '../types/task';
 import { useSettingsStore } from '../stores/settings';
 import { bindCollapse } from '../composables/useCollapse';
-import TaskItem from './TaskItem.vue';
+import QuadrantGroup from './QuadrantGroup.vue';
 import Icon from './icons/Icon.vue';
+
+const QUADRANT_ORDER: (Quadrant | null)[] = [
+  'urgent_important',
+  'not_urgent_important',
+  'urgent_not_important',
+  'not_urgent_not_important',
+  null,
+];
+
+function groupByQuadrant(tasks: Task[]): Array<{ quadrant: Quadrant | null; tasks: Task[] }> {
+  const buckets = new Map<Quadrant | null, Task[]>();
+  for (const q of QUADRANT_ORDER) buckets.set(q, []);
+  for (const t of tasks) buckets.get(t.quadrant ?? null)!.push(t);
+  return QUADRANT_ORDER
+    .map((q) => ({ quadrant: q, tasks: buckets.get(q)! }))
+    .filter((g) => g.tasks.length > 0);
+}
 
 const props = withDefaults(defineProps<{
   /// The source this file belongs to. Used to compute a relative path for the
@@ -110,7 +128,12 @@ async function clearLabel() {
     </div>
 
     <div v-if="!collapsed" class="rows">
-      <TaskItem v-for="tk in tasks" :key="tk.id" :task="tk" />
+      <QuadrantGroup
+        v-for="g in groupByQuadrant(tasks)"
+        :key="String(g.quadrant)"
+        :quadrant="g.quadrant"
+        :tasks="g.tasks"
+      />
       <div v-if="tasks.length === 0" class="empty">{{ t('file.noTasks') }}</div>
     </div>
   </div>

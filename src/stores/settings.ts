@@ -100,6 +100,18 @@ export const useSettingsStore = defineStore('settings', () => {
     await api.setHubFolder(path);
     await load();
   }
+
+  const autoCreateQuadrantHeaders = computed(
+    () => config.value?.auto_create_quadrant_headers ?? true,
+  );
+
+  async function setAutoCreateQuadrantHeaders(on: boolean): Promise<void> {
+    if (!config.value) return;
+    const next = { ...config.value, auto_create_quadrant_headers: on };
+    await api.updateConfig(next);
+    config.value = next;
+  }
+
   async function resyncHub() {
     await api.resyncHub();
     await load();
@@ -137,6 +149,7 @@ export const useSettingsStore = defineStore('settings', () => {
     enabledQuickActions,
     alwaysOnTop,
     hubFolder,
+    autoCreateQuadrantHeaders,
     scanningSourceIds,
     isScanning,
     markScanning,
@@ -151,6 +164,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setAlwaysOnTop,
     toggleAlwaysOnTop,
     setHubFolder,
+    setAutoCreateQuadrantHeaders,
     resyncHub,
     pickAndSetHubFolder,
     pickAndAddFolder,

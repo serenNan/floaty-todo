@@ -12,10 +12,28 @@ import {
   startSourceDrag,
 } from '../composables/useSourceDrag';
 import FileGroup from './FileGroup.vue';
-import TaskItem from './TaskItem.vue';
 import QuickActionIcon from './icons/QuickActionIcon.vue';
 import Icon from './icons/Icon.vue';
 import { SOURCE_COLORS, safeHexColor } from '../utils/colors';
+import QuadrantGroup from './QuadrantGroup.vue';
+import type { Quadrant } from '../types/task';
+
+const QUADRANT_ORDER: (Quadrant | null)[] = [
+  'urgent_important',
+  'not_urgent_important',
+  'urgent_not_important',
+  'not_urgent_not_important',
+  null,
+];
+
+function groupByQuadrant(tasks: Task[]): Array<{ quadrant: Quadrant | null; tasks: Task[] }> {
+  const buckets = new Map<Quadrant | null, Task[]>();
+  for (const q of QUADRANT_ORDER) buckets.set(q, []);
+  for (const t of tasks) buckets.get(t.quadrant ?? null)!.push(t);
+  return QUADRANT_ORDER
+    .map((q) => ({ quadrant: q, tasks: buckets.get(q)! }))
+    .filter((g) => g.tasks.length > 0);
+}
 
 /// Auto-collapse every FileGroup the first time we render a source whose
 /// task count exceeds this threshold. Keeps the DOM tree small enough to
@@ -24,7 +42,7 @@ import { SOURCE_COLORS, safeHexColor } from '../utils/colors';
 const BIG_SOURCE_TASK_THRESHOLD = 50;
 
 const props = defineProps<{ source: Source; tasks: Task[] }>();
-const emit = defineEmits<{ 'open-settings': [] }>();
+defineEmits<{ 'open-settings': [] }>();
 const { t } = useI18n();
 const settings = useSettingsStore();
 
@@ -393,11 +411,14 @@ const colorStyle = computed(() =>
     <div v-if="!collapsed" class="rows">
       <div v-if="isScanning" class="scanning-row">{{ t('source.scanningHint') }}</div>
 
-      <!-- File source: render tasks directly. The source header *is* the
-           file header; an extra FileGroup wrapper would just nest the same
-           label twice. -->
+      <!-- File source: render tasks grouped by quadrant. -->
       <template v-if="source.kind === 'file'">
-        <TaskItem v-for="tk in tasks" :key="tk.id" :task="tk" />
+        <QuadrantGroup
+          v-for="g in groupByQuadrant(tasks)"
+          :key="String(g.quadrant)"
+          :quadrant="g.quadrant"
+          :tasks="g.tasks"
+        />
         <div v-if="tasks.length === 0 && !isScanning" class="empty-source">{{ t('source.noTasks') }}</div>
       </template>
 

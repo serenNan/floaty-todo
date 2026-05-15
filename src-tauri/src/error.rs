@@ -23,6 +23,8 @@ pub enum AppError {
     NotATaskLine { path: String, line: usize },
     #[error("command failed: {0}")]
     CommandFailed(String),
+    #[error("quadrant header missing for {0:?}")]
+    QuadrantHeaderMissing(crate::types::Quadrant),
 }
 
 pub type Result<T> = std::result::Result<T, AppError>;

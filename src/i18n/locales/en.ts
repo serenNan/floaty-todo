@@ -63,6 +63,13 @@ export default {
     },
     removeConfirm: 'Remove source "{label}"?\nThis only forgets it in Floaty Todo — the files are untouched.',
   },
+  quadrant: {
+    urgent_important: 'Urgent · Important',
+    not_urgent_important: 'Important · Not Urgent',
+    urgent_not_important: 'Urgent · Not Important',
+    not_urgent_not_important: 'Neither',
+    unsorted: 'Unsorted',
+  },
   settings: {
     title: 'Settings',
     back: 'Back',
@@ -109,6 +116,10 @@ export default {
     about: {
       tagline: 'A floating, file-first todo aggregator.',
     },
+    behavior: 'Behavior',
+    auto_create_quadrant_headers: 'Auto-create quadrant headers',
+    auto_create_quadrant_headers_help:
+      'When you add a task to a quadrant whose header is missing, create the header automatically.',
   },
   errors: {
     pickFailed: 'Could not pick that path.',

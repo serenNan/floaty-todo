@@ -202,6 +202,9 @@ onUnmounted(() => {
           <p>{{ selected.note }}</p>
         </div>
 
+        <!-- `add` events carry no `before` and `delete` events carry no
+             `after` — `raw()` renders ∅ for the absent side, which is the
+             correct depiction (nothing there before / after the action). -->
         <div v-else class="diff">
           <div class="diff-col before">
             <div class="diff-label">Before</div>

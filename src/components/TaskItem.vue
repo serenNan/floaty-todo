@@ -117,7 +117,7 @@ async function onDelete() {
     <button
       type="button"
       class="del-btn"
-      :title="t('confirm.deleteTaskConfirm')"
+      :title="t('confirm.deleteTaskTitle')"
       @click.prevent.stop="onDelete"
     >
       <Icon name="trash" :size="14" />

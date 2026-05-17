@@ -19,6 +19,7 @@
 - [ ] **[v1.0] 拖拽排序整个 source**（不只是 quick-action 按钮）—— 让用户调整 source 在 TaskList 里的显示顺序
 - [ ] **[v2.0] 配套 Claude Code skill (todo skill)**：写一个标准 skill 教 Claude 怎么遵守 PLAN.md 第十节的约定（行号稳定 / 不加 emoji 元数据等）
 - [ ] 历史记录面板完善
+- [ ] 接入codex
 
 ## 🟠 紧急不重要
 

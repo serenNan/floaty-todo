@@ -1,5 +1,10 @@
 # 变更日志
 
+## 2026-05-17 quadrant header caret 对齐微调
+
+- `QuadrantGroup.vue` caret 改 20px inline-flex 盒，与 source caret 网格
+  对齐；header 左 padding 微调到 0.3rem 让象限 caret 略前于 source caret
+
 ## 2026-05-17 补提删除任务设计文档
 
 - 归档「删除任务」设计文档 + 实现计划到 `docs/superpowers/`（功能已实现，

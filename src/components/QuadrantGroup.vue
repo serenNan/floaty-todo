@@ -112,7 +112,10 @@ async function addHere() {
   align-items: center;
   gap: 0.4rem;
   width: 100%;
-  padding: 0.15rem 0.4rem;
+  /* Left padding pulls the whole quadrant header ~5px to the left of the
+     source header (whose left padding is 0.6rem) so the disclosure caret
+     pokes slightly ahead of the source caret. */
+  padding: 0.15rem 0.4rem 0.15rem 0.3rem;
   background: none;
   border: 0;
   font: inherit;
@@ -121,7 +124,15 @@ async function addHere() {
   text-align: left;
 }
 .quadrant-header:hover { color: var(--text, #ddd); }
-.quadrant-header .caret { width: 0.8em; font-size: 0.75em; }
+/* Match the source caret's 20px box so the two carets line up on the
+   same grid — only the header's left padding sets the slight offset. */
+.quadrant-header .caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  font-size: 0.7em;
+}
 .quadrant-header .emoji { font-size: 0.95em; }
 .quadrant-header .name { flex: 1; font-size: 0.82em; }
 .quadrant-header .count {

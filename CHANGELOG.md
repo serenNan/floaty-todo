@@ -1,5 +1,10 @@
 # 变更日志
 
+## 2026-05-17 gitignore 忽略 .claude/worktrees/
+
+- `.gitignore` 新增 `.claude/worktrees/`（superpowers 临时 git worktree 目录），
+  原先工作区里那条裸 `worktrees` 未提交且范围过宽，改为精确路径并补结尾换行
+
 ## 2026-05-17 quadrant header caret 对齐微调
 
 - `QuadrantGroup.vue` caret 改 20px inline-flex 盒，与 source caret 网格

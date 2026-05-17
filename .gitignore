@@ -25,3 +25,4 @@ dist-ssr
 
 # Superpowers skill cache
 .superpowers/
+.claude/worktrees/
